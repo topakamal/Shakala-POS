@@ -31,6 +31,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fflate": "^0.8.3",
+    "firebase": "^12.19.0",
     "jeep-sqlite": "^2.8.0",
     "jsbarcode": "^3.12.3",
     "jsqr": "^1.4.0",

@@ -28,6 +28,19 @@ import {
 import { androidSecureCredentialStore } from '@/services/auth/androidSecureCredentials'
 import { SYNC_ENTITIES } from '@/services/sync/applyPull'
 import { SyncEngine } from '@/services/sync/SyncEngine'
+import { FirebaseApiClient } from '@/services/firebase/api'
+import type { ChangeEnvelope, PullResult, PushResult } from '@/services/sync/types'
+
+interface PosCloudApi {
+  loginEmail(email: string, password: string): Promise<AuthPayload>
+  registerEmail(name: string, email: string, password: string): Promise<AuthPayload>
+  loginGoogle(idToken: string): Promise<AuthPayload>
+  logout(): Promise<void>
+  createStore(name: string): Promise<{ store: AccountStore; stores: AccountStore[] }>
+  renameStore(id: string | number, name: string): Promise<{ store: AccountStore }>
+  syncPush(changes: ChangeEnvelope[]): Promise<PushResult>
+  syncPull(entity: string, since: number): Promise<PullResult>
+}
 
 /** Semua device-local (disimpan di tabel settings, tidak ikut sync). */
 const KEYS = {
@@ -87,7 +100,28 @@ export const useAccountStore = defineStore('account', () => {
     storeId: () => currentStoreId.value,
     onUnauthorized: () => void clearSessionAfterUnauthorized(),
   }
-  const api = new ApiClient(context)
+  const firebaseApi = new FirebaseApiClient()
+  const useFirebase = (import.meta.env.VITE_BACKEND as string | undefined) !== 'laravel'
+  const api: PosCloudApi = useFirebase
+    ? {
+        loginEmail: (email, password) => firebaseApi.loginEmail(email, password),
+        registerEmail: (name, email, password) => firebaseApi.registerEmail(name, email, password),
+        loginGoogle: async () => {
+          throw new Error('Login Google Firebase belum diaktifkan. Gunakan email dan password.')
+        },
+        logout: () => firebaseApi.logout(),
+        createStore: (name) => firebaseApi.createStore(name),
+        renameStore: (id, name) => firebaseApi.renameStore(id, name),
+        syncPush: (changes) => {
+          if (!currentStoreId.value) throw new Error('Toko Firebase belum dipilih.')
+          return firebaseApi.syncPush(changes, currentStoreId.value)
+        },
+        syncPull: (entity, since) => {
+          if (!currentStoreId.value) throw new Error('Toko Firebase belum dipilih.')
+          return firebaseApi.syncPull(entity, since, currentStoreId.value)
+        },
+      }
+    : new ApiClient(context)
 
   async function load(): Promise<void> {
     const all = await repo().getAll()

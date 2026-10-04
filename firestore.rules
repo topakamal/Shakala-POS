@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function member(storeId) {
+      return signedIn() && exists(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid));
+    }
+
+    match /stores/{storeId} {
+      allow read: if member(storeId);
+      allow create: if signedIn() && request.resource.data.owner_id == request.auth.uid;
+      allow update: if member(storeId);
+
+      match /members/{userId} {
+        allow read: if member(storeId);
+        allow create: if signedIn() && userId == request.auth.uid;
+        allow update, delete: if member(storeId);
+      }
+
+      match /{entity}/{entityId} {
+        allow read, write: if member(storeId);
+      }
+    }
+
+    match /users/{userId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+  }
+}
