@@ -75,6 +75,7 @@ jobs:
       - name: Build APK (debug-signed)
         working-directory: android
         run: |
+          chmod +x gradlew
           ./gradlew assembleDebug \
             -PappVersionCode=${{ steps.version.outputs.code }} \
             -PappVersionName=${{ steps.version.outputs.name }}
