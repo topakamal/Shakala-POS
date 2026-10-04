@@ -3,6 +3,7 @@ name: Build APK on Release
 # Tiap Release di-publish di GitHub (tag vX.Y.Z) → build APK & tempel ke Release itu.
 # Versi app diturunkan otomatis dari tag: versionName = X.Y.Z, versionCode = X*10000 + Y*100 + Z.
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -20,13 +21,16 @@ jobs:
         id: version
         run: |
           tag="${GITHUB_REF_NAME}"
-          if [[ ! "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::Tag '$tag' bukan format 'vX.Y.Z' (semver). Bikin Release dengan tag mis. v1.3.0."
-            exit 1
+          if [[ "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
+          else
+            # Manual run dari tab Actions tidak punya tag Release.
+            major=1
+            minor=0
+            patch="${GITHUB_RUN_NUMBER}"
           fi
-          major="${BASH_REMATCH[1]}"
-          minor="${BASH_REMATCH[2]}"
-          patch="${BASH_REMATCH[3]}"
           name="${major}.${minor}.${patch}"
           code=$(( major * 10000 + minor * 100 + patch ))
           echo "name=$name" >> "$GITHUB_OUTPUT"
@@ -48,8 +52,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses > /dev/null || true
+
       - name: Install Android platform & build-tools
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install dependencies
         run: npm ci
@@ -76,7 +83,14 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk \
             "dist/pos-kacaw-${{ steps.version.outputs.name }}.apk"
 
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pos-kacaw-${{ steps.version.outputs.name }}
+          path: dist/pos-kacaw-${{ steps.version.outputs.name }}.apk
+
       - name: Attach APK to Release
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/pos-kacaw-${{ steps.version.outputs.name }}.apk
