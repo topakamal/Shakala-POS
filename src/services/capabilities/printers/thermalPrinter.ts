@@ -24,6 +24,6 @@ export class ThermalPrinter implements PrinterCapability {
   async print(job: ReceiptJob): Promise<void> {
     const target = getSelectedPrinter()
     if (!target) throw new Error('Printer belum dipilih. Atur di Setelan → Printer.')
-    await getPrinterTransport().print(target, encodeReceipt(job))
+    await getPrinterTransport().print(target, await encodeReceipt(job))
   }
 }

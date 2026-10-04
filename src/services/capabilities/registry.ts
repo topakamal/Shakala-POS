@@ -14,6 +14,8 @@ export interface ReceiptLine {
 export interface ReceiptJob {
   title: string
   lines: ReceiptLine[]
+  logoDataUrl?: string
+  paperWidth?: number
   /** HTML lengkap struk buat preview/print web. */
   html?: string
 }

@@ -2,10 +2,13 @@ import type { Sale, SaleItem } from '@/db/types'
 import type { ReceiptJob, ReceiptLine } from '@/services/capabilities/registry'
 import { formatRupiah } from './money'
 import { formatDateTime } from './datetime'
+import type { ReceiptHeaderMode } from '@/stores/settings'
 
 export interface ReceiptOpts {
   storeName: string
   storeOwner?: string
+  headerMode?: ReceiptHeaderMode
+  logoDataUrl?: string | null
   width?: number // karakter per baris (monospace); default 32 ala thermal 58mm
 }
 
@@ -65,8 +68,12 @@ export function buildReceipt(
   const div = '-'.repeat(w)
   const lines: ReceiptLine[] = []
 
-  lines.push({ text: opts.storeName, align: 'center', bold: true, size: 'large' })
-  if (opts.storeOwner) lines.push({ text: opts.storeOwner, align: 'center' })
+  const mode = opts.headerMode ?? 'name'
+  const hasLogo = !!opts.logoDataUrl
+  if (mode !== 'logo' || !hasLogo) {
+    lines.push({ text: opts.storeName, align: 'center', bold: true, size: 'large' })
+    if (opts.storeOwner) lines.push({ text: opts.storeOwner, align: 'center' })
+  }
   lines.push({ text: div })
   lines.push({ text: `No  : ${sale.number}` })
   lines.push({ text: `Tgl : ${formatDateTime(soldAt)}` })
@@ -92,5 +99,10 @@ export function buildReceipt(
   lines.push({ text: div })
   lines.push({ text: 'Terima kasih 🙏', align: 'center' })
 
-  return { title: `Struk ${sale.number}`, lines }
+  return {
+    title: `Struk ${sale.number}`,
+    lines,
+    logoDataUrl: mode === 'name' ? undefined : (opts.logoDataUrl ?? undefined),
+    paperWidth: w,
+  }
 }

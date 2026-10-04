@@ -28,6 +28,9 @@ export class WebPreviewPrinter implements PrinterCapability {
   }
 
   private renderHtml(job: ReceiptJob): string {
+    const logo = job.logoDataUrl
+      ? `<img src="${job.logoDataUrl}" alt="Logo toko" style="display:block;max-width:190px;max-height:90px;margin:0 auto 8px;object-fit:contain" />`
+      : ''
     const body = job.lines
       .map((l) => {
         const align = l.align ?? 'left'
@@ -40,6 +43,6 @@ export class WebPreviewPrinter implements PrinterCapability {
       <style>
         body{font-family:'Courier New',monospace;width:280px;margin:0 auto;padding:12px;color:#000}
         .divider{border-top:1px dashed #000;margin:6px 0}
-      </style></head><body>${body}</body></html>`
+      </style></head><body>${logo}${body}</body></html>`
   }
 }

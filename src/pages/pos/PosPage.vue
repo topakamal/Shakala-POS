@@ -282,10 +282,13 @@ async function printReceipt() {
   if (!lastResult.value) return
   const printer = capabilities.get<PrinterCapability>('printer')
   if (!printer) return
+  await media.ensure([settings.storeLogo])
   await printer.print(
     buildReceipt(lastResult.value.sale, lastResult.value.items, {
       storeName: settings.storeName,
       storeOwner: settings.storeOwner,
+      headerMode: settings.receiptHeader,
+      logoDataUrl: media.url(settings.storeLogo),
       width: usePrinterStore().paperWidth,
     }),
   )

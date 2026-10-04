@@ -5,6 +5,7 @@ import { SettingsRepository } from '@/repositories/settings.repo'
 import { deviceUuid, devicePrefixOf } from '@/lib/uuid'
 
 export type SplashBg = 'brand' | 'light' | 'dark'
+export type ReceiptHeaderMode = 'name' | 'logo' | 'both'
 
 const KEYS = {
   storeName: 'store_name',
@@ -18,6 +19,7 @@ const KEYS = {
   splashBg: 'splash_bg',
   qrisPayload: 'qris_payload',
   qrisDynamic: 'qris_dynamic',
+  receiptHeader: 'receipt_header',
 } as const
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -33,6 +35,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const splashBg = ref<SplashBg>('brand') // DEFAULT: warna brand
   const qrisPayload = ref<string | null>(null) // string EMV QRIS statis hasil decode
   const qrisDynamic = ref(false) // DEFAULT: off — nominal QRIS di-inject otomatis
+  const receiptHeader = ref<ReceiptHeaderMode>('name')
 
   const hasPin = computed(() => !!pinHash.value)
   // Prefix pendek nomor struk, diturunkan dari device UUID (biar struk tetap ringkas).
@@ -56,6 +59,9 @@ export const useSettingsStore = defineStore('settings', () => {
     splashBg.value = bg === 'light' || bg === 'dark' ? bg : 'brand'
     qrisPayload.value = all[KEYS.qrisPayload] || null
     qrisDynamic.value = all[KEYS.qrisDynamic] === '1'
+    receiptHeader.value = all[KEYS.receiptHeader] === 'logo' || all[KEYS.receiptHeader] === 'both'
+      ? all[KEYS.receiptHeader] as ReceiptHeaderMode
+      : 'name'
 
     // device_id dibuat sekali: UUID v7 (timestamp-based, unik lintas device).
     // Nilai lama yang pendek (< 36 char, sebelum v0.1 rilis) di-upgrade ke v7.
@@ -108,6 +114,11 @@ export const useSettingsStore = defineStore('settings', () => {
     await repo().set(KEYS.qrisDynamic, enabled ? '1' : '0')
   }
 
+  async function setReceiptHeader(mode: ReceiptHeaderMode) {
+    receiptHeader.value = mode
+    await repo().set(KEYS.receiptHeader, mode)
+  }
+
   async function setLoginEnabled(enabled: boolean) {
     loginEnabled.value = enabled
     await repo().set(KEYS.loginEnabled, enabled ? '1' : '0')
@@ -137,6 +148,7 @@ export const useSettingsStore = defineStore('settings', () => {
     splashBg,
     qrisPayload,
     qrisDynamic,
+    receiptHeader,
     hasPin,
     devicePrefix,
     load,
@@ -145,6 +157,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setSplash,
     setQris,
     setQrisDynamic,
+    setReceiptHeader,
     setLoginEnabled,
     setPinHash,
     toggleTheme,

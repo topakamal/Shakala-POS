@@ -18,7 +18,7 @@ const plain = new Intl.NumberFormat('id-ID', {
 
 /** 26000 -> "Rp 26.000" */
 export function formatRupiah(amount: number): string {
-  return idr.format(Math.round(amount || 0))
+  return idr.format(Math.round(amount || 0)).replace(/\u00a0/g, ' ')
 }
 
 /** 26000 -> "26.000" (tanpa prefix Rp) */

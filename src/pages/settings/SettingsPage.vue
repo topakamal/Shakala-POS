@@ -27,7 +27,7 @@ const media = useMediaStore()
 const auth = useAuthStore()
 const account = useAccountStore()
 const router = useRouter()
-const { storeName, storeOwner, storeLogo, loginEnabled, hasPin, theme, devicePrefix,
+const { storeName, storeOwner, storeLogo, receiptHeader, loginEnabled, hasPin, theme, devicePrefix,
   splashEnabled, splashBg, qrisPayload, qrisDynamic } = storeToRefs(settings)
 
 const name = ref('')
@@ -244,6 +244,39 @@ function lockNow() {
               <Save class="size-4" />
               {{ savedFlash ? 'Tersimpan!' : 'Simpan Profil' }}
             </Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      <!-- Header struk -->
+      <section class="space-y-3">
+        <p class="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Header Struk
+        </p>
+        <Card>
+          <CardContent class="space-y-3 p-4">
+            <p class="text-xs text-muted-foreground">
+              Pilih tampilan bagian atas struk thermal dan preview cetak.
+            </p>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                v-for="option in [
+                  { id: 'name', label: 'Nama toko' },
+                  { id: 'logo', label: 'Logo toko' },
+                  { id: 'both', label: 'Logo + nama' },
+                ]"
+                :key="option.id"
+                type="button"
+                class="rounded-xl border px-2 py-3 text-xs font-medium transition"
+                :class="receiptHeader === option.id ? 'border-primary bg-primary/10 text-primary' : 'border-border'"
+                @click="settings.setReceiptHeader(option.id as 'name' | 'logo' | 'both')"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <p v-if="receiptHeader !== 'name' && !storeLogo" class="text-xs text-amber-600">
+              Tambahkan logo di Profil Toko agar logo bisa dicetak.
+            </p>
           </CardContent>
         </Card>
       </section>

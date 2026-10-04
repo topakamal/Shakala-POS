@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Printer, Receipt } from 'lucide-vue-next'
 import { useSalesStore } from '@/stores/sales'
 import { useSettingsStore } from '@/stores/settings'
+import { useMediaStore } from '@/stores/media'
 import { usePrinterStore } from '@/stores/printer'
 import { capabilities } from '@/services/capabilities/registry'
 import type { PrinterCapability } from '@/services/capabilities/registry'
@@ -41,10 +42,14 @@ async function printReceipt() {
   if (!sale.value) return
   const printer = capabilities.get<PrinterCapability>('printer')
   if (!printer) return
+  const media = useMediaStore()
+  await media.ensure([settings.storeLogo])
   await printer.print(
     buildReceipt(sale.value, items.value, {
       storeName: settings.storeName,
       storeOwner: settings.storeOwner,
+      headerMode: settings.receiptHeader,
+      logoDataUrl: media.url(settings.storeLogo),
       width: usePrinterStore().paperWidth,
     }),
   )
