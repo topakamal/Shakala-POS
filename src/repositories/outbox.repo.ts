@@ -130,6 +130,23 @@ export class OutboxRepository {
     return result.changes
   }
 
+  /** Resolve stale rows left by older app versions; cloud is authoritative. */
+  async resolveStale(): Promise<number> {
+    const rows = await this.db.query<OutboxRow>(
+      `SELECT * FROM outbox WHERE status = 'failed' AND last_error = 'stale'`,
+    )
+    if (!rows.length) return 0
+
+    await this.db.transaction(async (tx) => {
+      for (const row of rows) {
+        await this.clearDirty(tx, row)
+        await tx.run(`DELETE FROM outbox WHERE id = ? AND status = 'failed'`, [row.id])
+      }
+    })
+    await persist()
+    return rows.length
+  }
+
   async finalizePush({ rows, acked, rejected }: PushFinalization): Promise<void> {
     const pushedById = new Map(rows.map((row) => [row.id, row]))
     assertPushResultMatchesSubmitted({ acked, rejected }, pushedById.keys())

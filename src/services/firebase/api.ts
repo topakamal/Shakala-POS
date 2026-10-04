@@ -146,8 +146,15 @@ export class FirebaseApiClient {
           transaction.set(reference, payload, { merge: true })
           return 'acked'
         })
-        if (result === 'acked') acked.push(change.id)
-        else rejected.push({ id: change.id, reason: 'stale' })
+        if (result === 'acked') {
+          acked.push(change.id)
+        } else {
+          // Cloud already contains a newer version. Treat this as resolved:
+          // pull() will make the local copy converge to the cloud version.
+          // Keeping it as a failed outbox row makes a successful sync look
+          // broken forever and causes the same stale write to be retried.
+          acked.push(change.id)
+        }
       } catch (error) {
         rejected.push({ id: change.id, reason: error instanceof Error ? error.message : 'write_failed' })
       }

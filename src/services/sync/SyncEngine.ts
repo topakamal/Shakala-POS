@@ -130,6 +130,9 @@ export class SyncEngine {
   }
 
   private async push(): Promise<void> {
+    // Older builds displayed stale conflicts even though the cloud copy was
+    // already correct. Resolve those legacy rows before rebuilding dirty rows.
+    await this.outbox.resolveStale()
     await this.outbox.recoverMissingDirty(SYNC_ENTITIES)
     const rows = await this.outbox.pending()
     if (!rows.length) return
