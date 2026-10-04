@@ -9,6 +9,8 @@ export interface ReceiptOpts {
   storeOwner?: string
   headerMode?: ReceiptHeaderMode
   logoDataUrl?: string | null
+  headerText?: string
+  footerText?: string
   width?: number // karakter per baris (monospace); default 32 ala thermal 58mm
 }
 
@@ -74,7 +76,14 @@ export function buildReceipt(
     lines.push({ text: opts.storeName, align: 'center', bold: true, size: 'large' })
     if (opts.storeOwner) lines.push({ text: opts.storeOwner, align: 'center' })
   }
-  lines.push({ text: div })
+  if (opts.headerText?.trim()) {
+    for (const line of opts.headerText.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)) {
+      lines.push({ text: line, align: 'center' })
+    }
+  }
+  // Saat memakai logo, langsung lanjut ke nomor invoice agar tidak ada jarak
+  // divider tambahan di antara logo dan identitas transaksi.
+  if (mode !== 'logo' || !hasLogo || opts.headerText?.trim()) lines.push({ text: div })
   lines.push({ text: `No  : ${sale.number}` })
   lines.push({ text: `Tgl : ${formatDateTime(soldAt)}` })
   lines.push({ text: div })
@@ -91,13 +100,17 @@ export function buildReceipt(
   if (sale.discount > 0) {
     lines.push({ text: row('Diskon', `-${formatRupiah(sale.discount)}`, w) })
   }
+  if (sale.tax > 0) lines.push({ text: row('Pajak', formatRupiah(sale.tax), w) })
   lines.push({ text: row('TOTAL', formatRupiah(sale.total), w), bold: true })
   lines.push({ text: row(PAY_LABEL[sale.payment_method] ?? 'Bayar', formatRupiah(sale.paid), w) })
   if (sale.change_due > 0) {
     lines.push({ text: row('Kembali', formatRupiah(sale.change_due), w) })
   }
   lines.push({ text: div })
-  lines.push({ text: 'Terima kasih 🙏', align: 'center' })
+  const footer = opts.footerText?.trim() || 'Terima kasih 🙏'
+  for (const line of footer.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)) {
+    lines.push({ text: line, align: 'center' })
+  }
 
   return {
     title: `Struk ${sale.number}`,

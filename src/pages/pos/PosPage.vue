@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import AppHeader from '@/components/layout/AppHeader.vue'
@@ -58,6 +58,10 @@ const holdLabel = ref('')
 const selectedDiscardBill = ref<Sale | null>(null)
 const openBillBusyId = ref<string | null>(null)
 const operationError = ref<string | null>(null)
+
+watch([settings.taxEnabled, settings.taxPercent], () => {
+  cart.setTaxPercent(settings.taxEnabled ? settings.taxPercent : 0)
+}, { immediate: true })
 
 const headerSubtitle = computed(() => {
   if (cart.activeOpenBillId) {
@@ -121,12 +125,14 @@ async function submitHold() {
         deviceId: settings.deviceId,
         lines: checkoutLines(),
         discount: cart.discount,
+        taxPercent: settings.taxEnabled ? settings.taxPercent : 0,
         label,
       })
     } else {
       await sales.hold({
         lines: checkoutLines(),
         discount: cart.discount,
+        taxPercent: settings.taxEnabled ? settings.taxPercent : 0,
         devicePrefix: settings.devicePrefix || 'POS',
         deviceId: settings.deviceId,
         label,
@@ -249,6 +255,7 @@ async function pay({ paid, paymentMethod }: { paid: number; paymentMethod: strin
       paid,
       paymentMethod,
       discount: cart.discount,
+      taxPercent: settings.taxEnabled ? settings.taxPercent : 0,
       sessionId: cashier.current?.id ?? null,
     }
     const res = activeOpenBillId
@@ -289,6 +296,8 @@ async function printReceipt() {
       storeOwner: settings.storeOwner,
       headerMode: settings.receiptHeader,
       logoDataUrl: media.url(settings.storeLogo),
+      headerText: settings.receiptHeaderText,
+      footerText: settings.receiptFooterText,
       width: usePrinterStore().paperWidth,
     }),
   )

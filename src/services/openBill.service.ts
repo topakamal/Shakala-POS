@@ -44,7 +44,7 @@ export class OpenBillService {
   constructor(private readonly db: Db) {}
 
   async hold(input: HoldOpenBillInput): Promise<CheckoutResult> {
-    const amounts = saleAmounts(input.lines, input.discount)
+    const amounts = saleAmounts(input.lines, input.discount, input.taxPercent)
     assertDeviceId(input.deviceId)
     if (input.devicePrefix.trim().length === 0) {
       throw new CheckoutError({ kind: 'invalid-input', reason: 'Prefix perangkat wajib diisi' })
@@ -57,7 +57,7 @@ export class OpenBillService {
         number: await sales.nextNumber(input.devicePrefix, openedAt),
         subtotal: amounts.subtotal,
         discount: amounts.discount,
-        tax: 0,
+        tax: amounts.tax,
         total: amounts.total,
         paid: 0,
         change_due: 0,
@@ -89,7 +89,7 @@ export class OpenBillService {
   }
 
   async rehold(input: ReholdOpenBillInput): Promise<CheckoutResult> {
-    const amounts = saleAmounts(input.lines, input.discount)
+    const amounts = saleAmounts(input.lines, input.discount, input.taxPercent)
     assertDeviceId(input.deviceId)
     const result = await this.db.transaction(async (tx) => {
       const sales = new SaleRepository(tx)
@@ -98,7 +98,7 @@ export class OpenBillService {
       const updated = await sales.update(sale.id, {
         subtotal: amounts.subtotal,
         discount: amounts.discount,
-        tax: 0,
+        tax: amounts.tax,
         total: amounts.total,
         open_bill_label: openBillLabel(sale, input),
       })
@@ -123,7 +123,7 @@ export class OpenBillService {
   }
 
   async complete(input: CompleteOpenBillInput): Promise<CheckoutResult> {
-    const amounts = saleAmounts(input.lines, input.discount)
+    const amounts = saleAmounts(input.lines, input.discount, input.taxPercent)
     assertPayment(input)
     assertDeviceId(input.deviceId)
     const occurredAt = nowMs()
@@ -136,7 +136,7 @@ export class OpenBillService {
         session_id: input.sessionId ?? null,
         subtotal: amounts.subtotal,
         discount: amounts.discount,
-        tax: 0,
+        tax: amounts.tax,
         total: amounts.total,
         paid: input.paid,
         change_due: Math.max(0, input.paid - amounts.total),

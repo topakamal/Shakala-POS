@@ -26,6 +26,10 @@ const cart = useCartStore()
         <span class="text-sm text-muted-foreground">Total ({{ cart.count }} item)</span>
         <span class="text-lg font-bold">{{ formatRupiah(cart.total) }}</span>
       </div>
+      <div v-if="cart.tax > 0" class="flex items-center justify-between text-xs text-muted-foreground">
+        <span>Pajak ({{ cart.taxPercent }}%)</span>
+        <span>{{ formatRupiah(cart.tax) }}</span>
+      </div>
       <Button variant="outline" class="w-full" @click="emit('open-bills')">
         Open Bills
       </Button>

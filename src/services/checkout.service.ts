@@ -42,7 +42,7 @@ export class CheckoutService {
   }
 
   async checkout(input: CheckoutInput): Promise<CheckoutResult> {
-    const amounts = saleAmounts(input.lines, input.discount)
+    const amounts = saleAmounts(input.lines, input.discount, input.taxPercent)
     assertPayment(input)
     if (input.devicePrefix.trim().length === 0) {
       throw new CheckoutError({ kind: 'invalid-input', reason: 'Prefix perangkat wajib diisi' })
@@ -56,7 +56,7 @@ export class CheckoutService {
         number: await sales.nextNumber(input.devicePrefix, occurredAt),
         subtotal: amounts.subtotal,
         discount: amounts.discount,
-        tax: 0,
+        tax: amounts.tax,
         total: amounts.total,
         paid: input.paid,
         change_due: Math.max(0, input.paid - amounts.total),

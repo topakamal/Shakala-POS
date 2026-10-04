@@ -20,6 +20,10 @@ const KEYS = {
   qrisPayload: 'qris_payload',
   qrisDynamic: 'qris_dynamic',
   receiptHeader: 'receipt_header',
+  receiptHeaderText: 'receipt_header_text',
+  receiptFooterText: 'receipt_footer_text',
+  taxEnabled: 'tax_enabled',
+  taxPercent: 'tax_percent',
 } as const
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -36,6 +40,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const qrisPayload = ref<string | null>(null) // string EMV QRIS statis hasil decode
   const qrisDynamic = ref(false) // DEFAULT: off — nominal QRIS di-inject otomatis
   const receiptHeader = ref<ReceiptHeaderMode>('name')
+  const receiptHeaderText = ref('')
+  const receiptFooterText = ref('Terima kasih 🙏')
+  const taxEnabled = ref(false)
+  const taxPercent = ref(0)
 
   const hasPin = computed(() => !!pinHash.value)
   // Prefix pendek nomor struk, diturunkan dari device UUID (biar struk tetap ringkas).
@@ -62,6 +70,11 @@ export const useSettingsStore = defineStore('settings', () => {
     receiptHeader.value = all[KEYS.receiptHeader] === 'logo' || all[KEYS.receiptHeader] === 'both'
       ? all[KEYS.receiptHeader] as ReceiptHeaderMode
       : 'name'
+    receiptHeaderText.value = all[KEYS.receiptHeaderText] || ''
+    receiptFooterText.value = all[KEYS.receiptFooterText] ?? 'Terima kasih 🙏'
+    taxEnabled.value = all[KEYS.taxEnabled] === '1'
+    const parsedTax = Number(all[KEYS.taxPercent] ?? 0)
+    taxPercent.value = Number.isFinite(parsedTax) ? Math.min(100, Math.max(0, parsedTax)) : 0
 
     // device_id dibuat sekali: UUID v7 (timestamp-based, unik lintas device).
     // Nilai lama yang pendek (< 36 char, sebelum v0.1 rilis) di-upgrade ke v7.
@@ -119,6 +132,25 @@ export const useSettingsStore = defineStore('settings', () => {
     await repo().set(KEYS.receiptHeader, mode)
   }
 
+  async function setReceiptText(header: string, footer: string) {
+    receiptHeaderText.value = header
+    receiptFooterText.value = footer
+    await repo().setMany({
+      [KEYS.receiptHeaderText]: header,
+      [KEYS.receiptFooterText]: footer,
+    })
+  }
+
+  async function setTax(enabled: boolean, percent: number) {
+    const safePercent = Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 0
+    taxEnabled.value = enabled && safePercent > 0
+    taxPercent.value = safePercent
+    await repo().setMany({
+      [KEYS.taxEnabled]: taxEnabled.value ? '1' : '0',
+      [KEYS.taxPercent]: String(safePercent),
+    })
+  }
+
   async function setLoginEnabled(enabled: boolean) {
     loginEnabled.value = enabled
     await repo().set(KEYS.loginEnabled, enabled ? '1' : '0')
@@ -149,6 +181,10 @@ export const useSettingsStore = defineStore('settings', () => {
     qrisPayload,
     qrisDynamic,
     receiptHeader,
+    receiptHeaderText,
+    receiptFooterText,
+    taxEnabled,
+    taxPercent,
     hasPin,
     devicePrefix,
     load,
@@ -158,6 +194,8 @@ export const useSettingsStore = defineStore('settings', () => {
     setQris,
     setQrisDynamic,
     setReceiptHeader,
+    setReceiptText,
+    setTax,
     setLoginEnabled,
     setPinHash,
     toggleTheme,

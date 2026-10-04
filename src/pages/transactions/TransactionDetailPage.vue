@@ -50,6 +50,8 @@ async function printReceipt() {
       storeOwner: settings.storeOwner,
       headerMode: settings.receiptHeader,
       logoDataUrl: media.url(settings.storeLogo),
+      headerText: settings.receiptHeaderText,
+      footerText: settings.receiptFooterText,
       width: usePrinterStore().paperWidth,
     }),
   )

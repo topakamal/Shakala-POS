@@ -46,7 +46,7 @@ async function appendRasterLogo(
     for (let x = 0; x < source.width; x++) {
       const offset = (y * source.width + x) * 4
       const luminance = sourcePixels.data[offset] * 0.299 + sourcePixels.data[offset + 1] * 0.587 + sourcePixels.data[offset + 2] * 0.114
-      if (sourcePixels.data[offset + 3] > 30 && luminance < 245) {
+      if (sourcePixels.data[offset + 3] > 30 && luminance < 220) {
         minX = Math.min(minX, x)
         minY = Math.min(minY, y)
         maxX = Math.max(maxX, x)
@@ -61,7 +61,7 @@ async function appendRasterLogo(
   const cropBottom = maxY >= 0 ? Math.min(source.height - 1, maxY + margin) : source.height - 1
   const cropWidth = Math.max(1, cropRight - cropX + 1)
   const cropHeight = Math.max(1, cropBottom - cropY + 1)
-  const scale = Math.min(1, maxWidth / cropWidth, 100 / cropHeight)
+  const scale = Math.min(1, maxWidth / cropWidth, 140 / cropHeight)
   const width = Math.max(1, Math.floor(cropWidth * scale))
   const height = Math.max(1, Math.floor(cropHeight * scale))
   const canvas = document.createElement('canvas')

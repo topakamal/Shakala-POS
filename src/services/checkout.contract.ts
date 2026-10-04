@@ -12,6 +12,7 @@ export interface PaymentInput {
   readonly paid: number
   readonly paymentMethod: string
   readonly discount?: number
+  readonly taxPercent?: number
   readonly sessionId?: string | null
 }
 
@@ -34,11 +35,13 @@ export interface HoldOpenBillInput extends OpenBillLabelInput {
   readonly discount?: number
   readonly devicePrefix: string
   readonly deviceId: string
+  readonly taxPercent?: number
 }
 
 export interface ReholdOpenBillInput extends OpenBillAccessInput, OpenBillLabelInput {
   readonly lines: readonly CheckoutLine[]
   readonly discount?: number
+  readonly taxPercent?: number
 }
 
 export interface CompleteOpenBillInput extends PaymentInput, OpenBillAccessInput {}
@@ -51,6 +54,7 @@ export interface CheckoutResult {
 export interface SaleAmounts {
   readonly subtotal: number
   readonly discount: number
+  readonly tax: number
   readonly total: number
 }
 
@@ -115,6 +119,7 @@ function assertNever(value: never): never {
 export function saleAmounts(
   lines: readonly CheckoutLine[],
   requestedDiscount: number | undefined,
+  requestedTaxPercent = 0,
 ): SaleAmounts {
   if (lines.length === 0) throw new CheckoutError({ kind: 'empty-cart' })
   for (const line of lines) {
@@ -134,7 +139,12 @@ export function saleAmounts(
   }
   const subtotal = lines.reduce((sum, line) => sum + line.price * line.qty, 0)
   const appliedDiscount = Math.min(discount, subtotal)
-  return { subtotal, discount: appliedDiscount, total: subtotal - appliedDiscount }
+  if (!Number.isFinite(requestedTaxPercent) || requestedTaxPercent < 0 || requestedTaxPercent > 100) {
+    throw new CheckoutError({ kind: 'invalid-input', reason: 'Persentase pajak tidak valid' })
+  }
+  const taxable = subtotal - appliedDiscount
+  const tax = Math.round(taxable * requestedTaxPercent / 100)
+  return { subtotal, discount: appliedDiscount, tax, total: taxable + tax }
 }
 
 export function assertPayment(input: PaymentInput): void {

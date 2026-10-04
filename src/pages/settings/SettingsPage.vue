@@ -27,7 +27,8 @@ const media = useMediaStore()
 const auth = useAuthStore()
 const account = useAccountStore()
 const router = useRouter()
-const { storeName, storeOwner, storeLogo, receiptHeader, loginEnabled, hasPin, theme, devicePrefix,
+const { storeName, storeOwner, storeLogo, receiptHeader, receiptHeaderText, receiptFooterText,
+  taxEnabled, taxPercent, loginEnabled, hasPin, theme, devicePrefix,
   splashEnabled, splashBg, qrisPayload, qrisDynamic } = storeToRefs(settings)
 
 const name = ref('')
@@ -38,6 +39,10 @@ const logoBusy = ref(false)
 const qrisBusy = ref(false)
 const qrisError = ref('')
 const qrisPreview = ref<string | null>(null)
+const receiptHeaderDraft = ref('')
+const receiptFooterDraft = ref('')
+const taxPercentDraft = ref('0')
+const receiptSaved = ref(false)
 
 const SPLASH_BGS: Array<{ id: SplashBg; label: string; swatch: string }> = [
   { id: 'brand', label: 'Brand', swatch: 'bg-gradient-to-b from-hero to-hero/80' },
@@ -48,12 +53,27 @@ const SPLASH_BGS: Array<{ id: SplashBg; label: string; swatch: string }> = [
 onMounted(async () => {
   name.value = storeName.value
   owner.value = storeOwner.value
+  receiptHeaderDraft.value = receiptHeaderText.value
+  receiptFooterDraft.value = receiptFooterText.value
+  taxPercentDraft.value = String(taxPercent.value)
   if (storeLogo.value) media.ensure([storeLogo.value])
   await renderQrisPreview()
 })
 
 async function renderQrisPreview() {
   qrisPreview.value = qrisPayload.value ? await encodeQrToDataUrl(qrisPayload.value) : null
+}
+
+async function saveReceiptLayout() {
+  await settings.setReceiptText(receiptHeaderDraft.value, receiptFooterDraft.value)
+  receiptSaved.value = true
+  setTimeout(() => (receiptSaved.value = false), 1500)
+}
+
+async function saveTax() {
+  const value = Number(taxPercentDraft.value.replace(',', '.'))
+  await settings.setTax(taxEnabled.value, Number.isFinite(value) ? value : 0)
+  taxPercentDraft.value = String(taxPercent.value)
 }
 
 async function chooseQris() {
@@ -277,6 +297,71 @@ function lockNow() {
             <p v-if="receiptHeader !== 'name' && !storeLogo" class="text-xs text-amber-600">
               Tambahkan logo di Profil Toko agar logo bisa dicetak.
             </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <!-- Editor struk -->
+      <section class="space-y-3">
+        <p class="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Editor Header & Footer Struk
+        </p>
+        <Card>
+          <CardContent class="space-y-4 p-4">
+            <p class="text-xs text-muted-foreground">
+              Satu baris ditampilkan sebagai satu baris struk. Kosongkan footer untuk memakai ucapan terima kasih bawaan.
+            </p>
+            <div class="space-y-1.5">
+              <Label for="receipt-header-text">Tambahan header</Label>
+              <textarea
+                id="receipt-header-text"
+                v-model="receiptHeaderDraft"
+                rows="2"
+                maxlength="120"
+                class="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Contoh: Jln Ngasinan No.10\n085859950278"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <Label for="receipt-footer-text">Footer struk</Label>
+              <textarea
+                id="receipt-footer-text"
+                v-model="receiptFooterDraft"
+                rows="2"
+                maxlength="120"
+                class="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Terima kasih 🙏"
+              />
+            </div>
+            <Button class="w-full gap-2" @click="saveReceiptLayout">
+              <Save class="size-4" />
+              {{ receiptSaved ? 'Tersimpan!' : 'Simpan Format Struk' }}
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      <!-- Pajak -->
+      <section class="space-y-3">
+        <p class="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Pajak Transaksi
+        </p>
+        <Card>
+          <CardContent class="space-y-4 p-4">
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">%</div>
+              <div class="flex-1">
+                <p class="text-sm font-medium">Aktifkan pajak</p>
+                <p class="text-xs text-muted-foreground">Pajak dihitung dari subtotal setelah diskon dan ditambahkan ke total.</p>
+              </div>
+              <Switch :model-value="taxEnabled" @update:model-value="settings.setTax($event, Number(taxPercentDraft))" />
+            </div>
+            <div class="space-y-1.5">
+              <Label for="tax-percent">Persentase pajak (%)</Label>
+              <Input id="tax-percent" v-model="taxPercentDraft" type="number" inputmode="decimal" min="0" max="100" step="0.01" placeholder="0" />
+              <p class="text-xs text-muted-foreground">Default 0%. Contoh 11 untuk pajak 11%.</p>
+            </div>
+            <Button variant="outline" class="w-full" @click="saveTax">Simpan Pajak</Button>
           </CardContent>
         </Card>
       </section>

@@ -30,12 +30,15 @@ export interface OpenBillCartState {
 export const useCartStore = defineStore('cart', () => {
   const lines = ref<CartLine[]>([])
   const discount = ref(0)
+  const taxPercent = ref(0)
   const activeOpenBillId = ref<string | null>(null)
   const activeOpenBillLabel = ref<string | null>(null)
 
   const count = computed(() => lines.value.reduce((s, l) => s + l.qty, 0))
   const subtotal = computed(() => lines.value.reduce((s, l) => s + l.price * l.qty, 0))
-  const total = computed(() => Math.max(0, subtotal.value - discount.value))
+  const taxableAmount = computed(() => Math.max(0, subtotal.value - discount.value))
+  const tax = computed(() => Math.round(taxableAmount.value * taxPercent.value / 100))
+  const total = computed(() => taxableAmount.value + tax.value)
   const isEmpty = computed(() => lines.value.length === 0)
 
   /** Batas qty: kalau produk track_stock, gak boleh lebih dari stok. */
@@ -88,6 +91,10 @@ export const useCartStore = defineStore('cart', () => {
     activeOpenBillLabel.value = null
   }
 
+  function setTaxPercent(value: number) {
+    taxPercent.value = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0
+  }
+
   function snapshot(): CartSnapshot {
     return {
       lines: lines.value.map((line) => ({ ...line })),
@@ -113,11 +120,14 @@ export const useCartStore = defineStore('cart', () => {
   return {
     lines,
     discount,
+    taxPercent,
+    tax,
     activeOpenBillId,
     activeOpenBillLabel,
     count,
     subtotal,
     total,
+    setTaxPercent,
     isEmpty,
     maxQty,
     find,
