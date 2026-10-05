@@ -16,7 +16,7 @@ export class WebPreviewPrinter implements PrinterCapability {
   }
 
   async print(job: ReceiptJob): Promise<void> {
-    const html = job.html ?? this.renderHtml(job)
+    const html = job.html ?? await this.renderHtml(job)
     const w = window.open('', '_blank', 'width=380,height=640')
     if (!w) return
     w.document.write(html)
@@ -27,22 +27,46 @@ export class WebPreviewPrinter implements PrinterCapability {
     }, 250)
   }
 
-  private renderHtml(job: ReceiptJob): string {
+  private async renderHtml(job: ReceiptJob): Promise<string> {
     const logo = job.logoDataUrl
       ? `<img src="${job.logoDataUrl}" alt="Logo toko" style="display:block;max-width:190px;max-height:62px;margin:0 auto 2px;object-fit:contain" />`
       : ''
-    const body = job.lines
-      .map((l) => {
+    const renderedLines: string[] = []
+    for (const line of job.lines) {
+      if (line.imageDataUrl) {
+        renderedLines.push(`<img src="${line.imageDataUrl}" alt="Elemen struk" style="display:block;max-width:190px;max-height:120px;margin:2px auto;object-fit:contain" />`)
+        continue
+      }
+      if (line.barcodeValue) {
+        const canvas = document.createElement('canvas')
+        try {
+          const JsBarcode = (await import('jsbarcode')).default
+          JsBarcode(canvas, line.barcodeValue, { format: 'CODE128', displayValue: true, height: 42, margin: 2, fontSize: 11 })
+          renderedLines.push(`<img src="${canvas.toDataURL('image/png')}" alt="Barcode" style="display:block;max-width:100%;margin:4px auto" />`)
+        } catch {
+          renderedLines.push(`<div>${line.barcodeValue}</div>`)
+        }
+        continue
+      }
+      {
+        const l = line
         const align = l.align ?? 'left'
         const weight = l.bold ? '700' : '400'
         const size = l.size === 'large' ? '16px' : '12px'
-        return `<div style="text-align:${align};font-weight:${weight};font-size:${size}">${l.text || '&nbsp;'}</div>`
-      })
-      .join('')
+        renderedLines.push(`<div style="text-align:${align};font-weight:${weight};font-size:${size}">${escapeHtml(l.text || '') || '&nbsp;'}</div>`)
+      }
+    }
+    const body = renderedLines.join('')
     return `<!doctype html><html><head><meta charset="utf-8"><title>${job.title}</title>
       <style>
         body{font-family:'Courier New',monospace;width:280px;margin:0 auto;padding:4px;color:#000}
         .divider{border-top:1px dashed #000;margin:2px 0}
       </style></head><body>${logo}${body}</body></html>`
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character] ?? character)
 }

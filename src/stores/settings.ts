@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { getDb } from '@/db/sqlite'
 import { SettingsRepository } from '@/repositories/settings.repo'
 import { deviceUuid, devicePrefixOf } from '@/lib/uuid'
+import { defaultReceiptTemplate, parseReceiptTemplate, type ReceiptElement } from '@/lib/receiptTemplate'
 
 export type SplashBg = 'brand' | 'light' | 'dark'
 export type ReceiptHeaderMode = 'name' | 'logo' | 'both'
@@ -22,6 +23,7 @@ const KEYS = {
   receiptHeader: 'receipt_header',
   receiptHeaderText: 'receipt_header_text',
   receiptFooterText: 'receipt_footer_text',
+  receiptTemplate: 'receipt_template',
   taxEnabled: 'tax_enabled',
   taxPercent: 'tax_percent',
 } as const
@@ -42,6 +44,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const receiptHeader = ref<ReceiptHeaderMode>('name')
   const receiptHeaderText = ref('')
   const receiptFooterText = ref('Terima kasih 🙏')
+  const receiptTemplate = ref<ReceiptElement[]>(defaultReceiptTemplate())
   const taxEnabled = ref(false)
   const taxPercent = ref(0)
 
@@ -72,6 +75,7 @@ export const useSettingsStore = defineStore('settings', () => {
       : 'name'
     receiptHeaderText.value = all[KEYS.receiptHeaderText] || ''
     receiptFooterText.value = all[KEYS.receiptFooterText] ?? 'Terima kasih 🙏'
+    receiptTemplate.value = parseReceiptTemplate(all[KEYS.receiptTemplate])
     taxEnabled.value = all[KEYS.taxEnabled] === '1'
     const parsedTax = Number(all[KEYS.taxPercent] ?? 0)
     taxPercent.value = Number.isFinite(parsedTax) ? Math.min(100, Math.max(0, parsedTax)) : 0
@@ -141,6 +145,11 @@ export const useSettingsStore = defineStore('settings', () => {
     })
   }
 
+  async function setReceiptTemplate(elements: ReceiptElement[]) {
+    receiptTemplate.value = elements.map((element) => ({ ...element }))
+    await repo().set(KEYS.receiptTemplate, JSON.stringify(receiptTemplate.value))
+  }
+
   async function setTax(enabled: boolean, percent: number) {
     const safePercent = Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 0
     taxEnabled.value = enabled && safePercent > 0
@@ -183,6 +192,7 @@ export const useSettingsStore = defineStore('settings', () => {
     receiptHeader,
     receiptHeaderText,
     receiptFooterText,
+    receiptTemplate,
     taxEnabled,
     taxPercent,
     hasPin,
@@ -195,6 +205,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setQrisDynamic,
     setReceiptHeader,
     setReceiptText,
+    setReceiptTemplate,
     setTax,
     setLoginEnabled,
     setPinHash,

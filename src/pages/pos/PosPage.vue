@@ -30,6 +30,7 @@ import type { CartLine } from '@/stores/cart'
 import type { Sale } from '@/db/types'
 import { buildReceipt } from '@/lib/receipt'
 import { formatRupiah } from '@/lib/money'
+import { encodeQrToDataUrl } from '@/lib/qris'
 import { cn } from '@/lib/utils'
 
 const route = useRoute()
@@ -289,7 +290,11 @@ async function printReceipt() {
   if (!lastResult.value) return
   const printer = capabilities.get<PrinterCapability>('printer')
   if (!printer) return
-  await media.ensure([settings.storeLogo])
+  await media.ensure([settings.storeLogo, ...settings.receiptTemplate.map((element) => element.imageRef)])
+  const qrisDataUrl = settings.qrisPayload ? await encodeQrToDataUrl(settings.qrisPayload) : null
+  const imageDataByRef = Object.fromEntries(settings.receiptTemplate
+    .filter((element) => element.imageRef)
+    .map((element) => [element.imageRef!, media.url(element.imageRef)]))
   await printer.print(
     buildReceipt(lastResult.value.sale, lastResult.value.items, {
       storeName: settings.storeName,
@@ -298,6 +303,9 @@ async function printReceipt() {
       logoDataUrl: media.url(settings.storeLogo),
       headerText: settings.receiptHeaderText,
       footerText: settings.receiptFooterText,
+      template: settings.receiptTemplate,
+      qrisDataUrl,
+      imageDataByRef,
       width: usePrinterStore().paperWidth,
     }),
   )

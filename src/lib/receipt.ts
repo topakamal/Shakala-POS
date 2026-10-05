@@ -3,6 +3,7 @@ import type { ReceiptJob, ReceiptLine } from '@/services/capabilities/registry'
 import { formatRupiah } from './money'
 import { formatDateTime } from './datetime'
 import type { ReceiptHeaderMode } from '@/stores/settings'
+import type { ReceiptElement } from '@/lib/receiptTemplate'
 
 export interface ReceiptOpts {
   storeName: string
@@ -11,6 +12,9 @@ export interface ReceiptOpts {
   logoDataUrl?: string | null
   headerText?: string
   footerText?: string
+  template?: readonly ReceiptElement[]
+  qrisDataUrl?: string | null
+  imageDataByRef?: Record<string, string | null>
   width?: number // karakter per baris (monospace); default 32 ala thermal 58mm
 }
 
@@ -69,6 +73,60 @@ export function buildReceipt(
   const w = opts.width ?? 32
   const div = '-'.repeat(w)
   const lines: ReceiptLine[] = []
+
+  if (opts.template?.length) {
+    for (const element of opts.template) {
+      switch (element.type) {
+        case 'logo':
+          {
+            const image = element.imageRef ? opts.imageDataByRef?.[element.imageRef] : opts.logoDataUrl
+            if (image) lines.push({ text: '', imageDataUrl: image, align: element.align })
+          }
+          break
+        case 'store':
+          lines.push({ text: opts.storeName, align: element.align, bold: element.bold, size: element.size })
+          if (opts.storeOwner) lines.push({ text: opts.storeOwner, align: element.align })
+          break
+        case 'text':
+          if (element.text.trim()) lines.push({ text: element.text, align: element.align, bold: element.bold, size: element.size })
+          break
+        case 'datetime':
+          lines.push({ text: `Tgl : ${formatDateTime(soldAt)}`, align: element.align, bold: element.bold, size: element.size })
+          break
+        case 'separator':
+          lines.push({ text: '-'.repeat(w) })
+          break
+        case 'invoice':
+          lines.push({ text: `No  : ${sale.number}`, align: element.align, bold: element.bold, size: element.size })
+          break
+        case 'items':
+          for (const it of items) {
+            lines.push({ text: it.name_snapshot, align: 'left' })
+            lines.push({ text: row(`  ${it.qty} x ${formatRupiah(it.price_snapshot)}`, formatRupiah(it.line_total), w) })
+          }
+          break
+        case 'summary':
+          lines.push({ text: row('Subtotal', formatRupiah(sale.subtotal), w) })
+          if (sale.discount > 0) lines.push({ text: row('Diskon', `-${formatRupiah(sale.discount)}`, w) })
+          if (sale.tax > 0) lines.push({ text: row('Pajak', formatRupiah(sale.tax), w) })
+          lines.push({ text: row('TOTAL', formatRupiah(sale.total), w), bold: true, size: element.size })
+          lines.push({ text: row(PAY_LABEL[sale.payment_method] ?? 'Bayar', formatRupiah(sale.paid), w) })
+          if (sale.change_due > 0) lines.push({ text: row('Kembali', formatRupiah(sale.change_due), w) })
+          break
+        case 'qrcode':
+          if (opts.qrisDataUrl) lines.push({ text: '', imageDataUrl: opts.qrisDataUrl, align: element.align })
+          break
+        case 'barcode':
+          lines.push({ text: '', barcodeValue: sale.number, align: element.align })
+          break
+      }
+    }
+    return {
+      title: `Struk ${sale.number}`,
+      lines,
+      paperWidth: w,
+    }
+  }
 
   const mode = opts.headerMode ?? 'name'
   const hasLogo = !!opts.logoDataUrl

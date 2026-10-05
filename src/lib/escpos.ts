@@ -126,6 +126,26 @@ export async function encodeReceipt(job: ReceiptJob, opts: EscposOpts = {}): Pro
   let curBold = -1
   let curSize = -1
   for (const line of job.lines) {
+    if (line.imageDataUrl) {
+      try {
+        await appendRasterLogo(push, line.imageDataUrl, job.paperWidth && job.paperWidth > 32 ? 576 : 384)
+      } catch {
+        // Lanjut cetak elemen lain bila gambar tidak bisa dibaca printer.
+      }
+      continue
+    }
+    if (line.barcodeValue) {
+      try {
+        const canvas = document.createElement('canvas')
+        const JsBarcode = (await import('jsbarcode')).default
+        JsBarcode(canvas, line.barcodeValue, { format: 'CODE128', displayValue: true, height: 48, margin: 2, fontSize: 12 })
+        await appendRasterLogo(push, canvas.toDataURL('image/png'), job.paperWidth && job.paperWidth > 32 ? 576 : 384)
+      } catch {
+        text(line.barcodeValue)
+        push(0x0a)
+      }
+      continue
+    }
     const align = line.align === 'center' ? 1 : line.align === 'right' ? 2 : 0
     if (align !== curAlign) {
       push(0x1b, 0x61, align) // ESC a n

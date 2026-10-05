@@ -35,7 +35,7 @@ jobs:
           code=$(( major * 10000 + minor * 100 + patch ))
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
-            echo "APK: shakala-pos-$name.apk (versionCode=$code, versionName=$name)"
+          echo "APK: shakala-pos-$name.apk (versionCode=$code, versionName=$name)"
 
       - name: Setup Node
         uses: actions/setup-node@v4

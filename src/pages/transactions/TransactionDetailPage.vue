@@ -14,6 +14,7 @@ import type { PrinterCapability } from '@/services/capabilities/registry'
 import { buildReceipt } from '@/lib/receipt'
 import { formatRupiah } from '@/lib/money'
 import { formatDateTime } from '@/lib/datetime'
+import { encodeQrToDataUrl } from '@/lib/qris'
 import type { Sale, SaleItem } from '@/db/types'
 
 const route = useRoute()
@@ -43,7 +44,11 @@ async function printReceipt() {
   const printer = capabilities.get<PrinterCapability>('printer')
   if (!printer) return
   const media = useMediaStore()
-  await media.ensure([settings.storeLogo])
+  await media.ensure([settings.storeLogo, ...settings.receiptTemplate.map((element) => element.imageRef)])
+  const qrisDataUrl = settings.qrisPayload ? await encodeQrToDataUrl(settings.qrisPayload) : null
+  const imageDataByRef = Object.fromEntries(settings.receiptTemplate
+    .filter((element) => element.imageRef)
+    .map((element) => [element.imageRef!, media.url(element.imageRef)]))
   await printer.print(
     buildReceipt(sale.value, items.value, {
       storeName: settings.storeName,
@@ -52,6 +57,9 @@ async function printReceipt() {
       logoDataUrl: media.url(settings.storeLogo),
       headerText: settings.receiptHeaderText,
       footerText: settings.receiptFooterText,
+      template: settings.receiptTemplate,
+      qrisDataUrl,
+      imageDataByRef,
       width: usePrinterStore().paperWidth,
     }),
   )

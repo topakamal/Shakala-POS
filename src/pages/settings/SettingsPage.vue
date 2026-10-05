@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import BottomSheet from '@/components/common/BottomSheet.vue'
 import PinPad from '@/components/common/PinPad.vue'
+import ReceiptTemplateEditor from '@/components/settings/ReceiptTemplateEditor.vue'
 import {
   Store, Lock, Moon, Cloud, Smartphone, Save, ImagePlus, Sparkles, Check,
   QrCode, Loader2, KeyRound, LockKeyhole,
@@ -27,7 +28,7 @@ const media = useMediaStore()
 const auth = useAuthStore()
 const account = useAccountStore()
 const router = useRouter()
-const { storeName, storeOwner, storeLogo, receiptHeader, receiptHeaderText, receiptFooterText,
+const { storeName, storeOwner, storeLogo,
   taxEnabled, taxPercent, loginEnabled, hasPin, theme, devicePrefix,
   splashEnabled, splashBg, qrisPayload, qrisDynamic } = storeToRefs(settings)
 
@@ -39,10 +40,7 @@ const logoBusy = ref(false)
 const qrisBusy = ref(false)
 const qrisError = ref('')
 const qrisPreview = ref<string | null>(null)
-const receiptHeaderDraft = ref('')
-const receiptFooterDraft = ref('')
 const taxPercentDraft = ref('0')
-const receiptSaved = ref(false)
 
 const SPLASH_BGS: Array<{ id: SplashBg; label: string; swatch: string }> = [
   { id: 'brand', label: 'Brand', swatch: 'bg-gradient-to-b from-hero to-hero/80' },
@@ -53,8 +51,6 @@ const SPLASH_BGS: Array<{ id: SplashBg; label: string; swatch: string }> = [
 onMounted(async () => {
   name.value = storeName.value
   owner.value = storeOwner.value
-  receiptHeaderDraft.value = receiptHeaderText.value
-  receiptFooterDraft.value = receiptFooterText.value
   taxPercentDraft.value = String(taxPercent.value)
   if (storeLogo.value) media.ensure([storeLogo.value])
   await renderQrisPreview()
@@ -62,12 +58,6 @@ onMounted(async () => {
 
 async function renderQrisPreview() {
   qrisPreview.value = qrisPayload.value ? await encodeQrToDataUrl(qrisPayload.value) : null
-}
-
-async function saveReceiptLayout() {
-  await settings.setReceiptText(receiptHeaderDraft.value, receiptFooterDraft.value)
-  receiptSaved.value = true
-  setTimeout(() => (receiptSaved.value = false), 1500)
 }
 
 async function saveTax() {
@@ -268,78 +258,7 @@ function lockNow() {
         </Card>
       </section>
 
-      <!-- Header struk -->
-      <section class="space-y-3">
-        <p class="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Header Struk
-        </p>
-        <Card>
-          <CardContent class="space-y-3 p-4">
-            <p class="text-xs text-muted-foreground">
-              Pilih tampilan bagian atas struk thermal dan preview cetak.
-            </p>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                v-for="option in [
-                  { id: 'name', label: 'Nama toko' },
-                  { id: 'logo', label: 'Logo toko' },
-                  { id: 'both', label: 'Logo + nama' },
-                ]"
-                :key="option.id"
-                type="button"
-                class="rounded-xl border px-2 py-3 text-xs font-medium transition"
-                :class="receiptHeader === option.id ? 'border-primary bg-primary/10 text-primary' : 'border-border'"
-                @click="settings.setReceiptHeader(option.id as 'name' | 'logo' | 'both')"
-              >
-                {{ option.label }}
-              </button>
-            </div>
-            <p v-if="receiptHeader !== 'name' && !storeLogo" class="text-xs text-amber-600">
-              Tambahkan logo di Profil Toko agar logo bisa dicetak.
-            </p>
-          </CardContent>
-        </Card>
-      </section>
-
-      <!-- Editor struk -->
-      <section class="space-y-3">
-        <p class="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Editor Header & Footer Struk
-        </p>
-        <Card>
-          <CardContent class="space-y-4 p-4">
-            <p class="text-xs text-muted-foreground">
-              Satu baris ditampilkan sebagai satu baris struk. Kosongkan footer untuk memakai ucapan terima kasih bawaan.
-            </p>
-            <div class="space-y-1.5">
-              <Label for="receipt-header-text">Tambahan header</Label>
-              <textarea
-                id="receipt-header-text"
-                v-model="receiptHeaderDraft"
-                rows="2"
-                maxlength="120"
-                class="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Contoh: Jln Ngasinan No.10\n085859950278"
-              />
-            </div>
-            <div class="space-y-1.5">
-              <Label for="receipt-footer-text">Footer struk</Label>
-              <textarea
-                id="receipt-footer-text"
-                v-model="receiptFooterDraft"
-                rows="2"
-                maxlength="120"
-                class="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Terima kasih 🙏"
-              />
-            </div>
-            <Button class="w-full gap-2" @click="saveReceiptLayout">
-              <Save class="size-4" />
-              {{ receiptSaved ? 'Tersimpan!' : 'Simpan Format Struk' }}
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
+      <ReceiptTemplateEditor />
 
       <!-- Pajak -->
       <section class="space-y-3">

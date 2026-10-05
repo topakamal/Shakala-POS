@@ -5,10 +5,12 @@ export interface Capability {
 }
 
 export interface ReceiptLine {
-  text: string
+  text?: string
   align?: 'left' | 'center' | 'right'
   bold?: boolean
   size?: 'normal' | 'large'
+  imageDataUrl?: string
+  barcodeValue?: string
 }
 
 export interface ReceiptJob {
