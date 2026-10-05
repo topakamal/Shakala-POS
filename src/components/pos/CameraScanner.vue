@@ -23,12 +23,13 @@ const session = shallowRef<ScannerSession | null>(null)
 const torchOn = ref(false)
 const starting = ref(true)
 const error = ref<'denied' | 'notfound' | 'unsupported' | 'other' | null>(null)
+const errorDetail = ref('')
 
 const gate = createScanGate({ sameCodeMs: props.sameCodeMs })
 
 const MESSAGES: Record<string, string> = {
   denied:
-    'Izin kamera ditolak. Buka Setelan → Aplikasi → POS Kacaw → Izin → Kamera, lalu coba lagi.',
+    'Izin kamera ditolak. Buka Setelan → Aplikasi → Shakala POS → Izin → Kamera, lalu coba lagi.',
   notfound: 'Kamera tidak ditemukan di perangkat ini.',
   unsupported: 'Perangkat ini tidak mendukung akses kamera dari aplikasi.',
   other: 'Kamera gagal dinyalakan.',
@@ -36,6 +37,7 @@ const MESSAGES: Record<string, string> = {
 
 async function start() {
   error.value = null
+  errorDetail.value = ''
   starting.value = true
   gate.reset()
   try {
@@ -53,6 +55,7 @@ async function start() {
     })
   } catch (err) {
     const name = err instanceof Error ? err.name : ''
+    errorDetail.value = err instanceof Error ? err.message : String(err)
     error.value =
       name === 'NotAllowedError' || name === 'SecurityError'
         ? 'denied'
@@ -122,6 +125,7 @@ defineExpose({ stop, start })
     >
       <CameraOff class="size-8 text-muted-foreground" />
       <p class="text-sm text-muted-foreground">{{ MESSAGES[error] }}</p>
+      <p v-if="errorDetail && error === 'other'" class="max-w-sm break-words text-xs text-muted-foreground">{{ errorDetail }}</p>
       <Button variant="outline" size="sm" @click="start">Coba lagi</Button>
     </div>
 
