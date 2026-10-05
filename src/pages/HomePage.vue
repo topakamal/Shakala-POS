@@ -17,10 +17,13 @@ import {
 import { storeToRefs } from 'pinia'
 import { useSettingsStore } from '@/stores/settings'
 import { useMediaStore } from '@/stores/media'
+import { useAccountStore } from '@/stores/account'
 
 const settings = useSettingsStore()
 const media = useMediaStore()
+const account = useAccountStore()
 const { storeName, storeOwner, storeLogo } = storeToRefs(settings)
+const { isAuthenticated } = storeToRefs(account)
 
 onMounted(() => {
   if (storeLogo.value) media.ensure([storeLogo.value])
@@ -66,6 +69,7 @@ const menu = [
 
       <!-- Banner konek POS Pro -->
       <RouterLink
+        v-if="!isAuthenticated"
         to="/settings"
         class="group mt-5 flex items-center gap-3 rounded-2xl bg-white/12 p-3.5 backdrop-blur transition hover:bg-white/[.18]"
       >
