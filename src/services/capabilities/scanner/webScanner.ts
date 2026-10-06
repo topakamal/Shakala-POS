@@ -36,12 +36,15 @@ async function openCameraPreview(mount: HTMLElement): Promise<{ stream: MediaStr
       video.autoplay = true
       video.muted = true
       video.playsInline = true
+      video.setAttribute('autoplay', '')
       video.setAttribute('muted', '')
       video.setAttribute('playsinline', '')
+      video.setAttribute('webkit-playsinline', '')
       video.className = 'size-full object-cover'
       video.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;background:#000'
       video.srcObject = stream
       mount.replaceChildren(video)
+      video.load()
       await video.play()
       await waitForFirstFrame(video)
       return { stream, video }
