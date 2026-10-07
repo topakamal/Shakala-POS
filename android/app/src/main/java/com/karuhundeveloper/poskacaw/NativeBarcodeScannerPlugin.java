@@ -65,6 +65,10 @@ public class NativeBarcodeScannerPlugin extends Plugin {
     }
 
     private void startScanner(PluginCall call) {
+        getActivity().runOnUiThread(() -> startScannerOnMain(call));
+    }
+
+    private void startScannerOnMain(PluginCall call) {
         if (previewView != null) {
             resolveStarted(call);
             return;
@@ -173,6 +177,10 @@ public class NativeBarcodeScannerPlugin extends Plugin {
 
     @PluginMethod
     public void setTorch(PluginCall call) {
+        getActivity().runOnUiThread(() -> setTorchOnMain(call));
+    }
+
+    private void setTorchOnMain(PluginCall call) {
         if (camera == null) {
             call.reject("Kamera belum aktif.", "camera_not_started");
             return;
@@ -191,8 +199,10 @@ public class NativeBarcodeScannerPlugin extends Plugin {
 
     @PluginMethod
     public void stop(PluginCall call) {
-        cleanupCamera();
-        call.resolve();
+        getActivity().runOnUiThread(() -> {
+            cleanupCamera();
+            call.resolve();
+        });
     }
 
     private void cleanupCamera() {
