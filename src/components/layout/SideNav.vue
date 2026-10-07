@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { Store } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
@@ -7,11 +7,20 @@ import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
 import { useMediaStore } from '@/stores/media'
 import { navItems, isNavActive } from './navItems'
+import { useAccountStore } from '@/stores/account'
 
 const route = useRoute()
 const settings = useSettingsStore()
 const media = useMediaStore()
 const { storeName, storeOwner, storeLogo } = storeToRefs(settings)
+const account = useAccountStore()
+const visibleNavItems = computed(() => navItems.filter((item) => {
+  if (item.to === '/products') return account.hasPermission('products')
+  if (item.to === '/cashflow') return account.hasPermission('cashflow')
+  if (item.to === '/reports') return account.hasPermission('reports')
+  if (item.to === '/settings' || item.to === '/printer') return account.hasPermission('settings')
+  return account.hasPermission('cashier')
+}))
 
 onMounted(() => {
   if (storeLogo.value) media.ensure([storeLogo.value])
@@ -49,7 +58,7 @@ onMounted(() => {
     <!-- Menu -->
     <nav class="no-scrollbar flex-1 space-y-1 overflow-y-auto p-3">
       <RouterLink
-        v-for="item in navItems"
+        v-for="item in visibleNavItems"
         :key="item.to"
         :to="item.to"
         class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors"

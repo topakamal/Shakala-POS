@@ -13,6 +13,7 @@ defineProps<{
   readonly email: string
   readonly password: string
   readonly password2: string
+  readonly accountRole: 'owner' | 'staff'
   readonly loading: boolean
   readonly status: 'idle' | 'loading'
   readonly localError: string
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   'update:email': [value: string]
   'update:password': [value: string]
   'update:password2': [value: string]
+  'update:accountRole': [value: 'owner' | 'staff']
   submit: []
   'google-login': []
 }>()
@@ -42,6 +44,14 @@ const emit = defineEmits<{
       <div v-if="mode === 'register'" class="space-y-2">
         <Label for="name">Nama</Label>
         <Input id="name" :model-value="name" placeholder="Nama kamu / toko" @update:model-value="emit('update:name', String($event))" />
+      </div>
+      <div v-if="mode === 'register'" class="space-y-2">
+        <Label>Jenis akun</Label>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" class="rounded-lg border p-2 text-sm" :class="accountRole === 'owner' ? 'border-primary bg-primary/10' : 'border-border'" @click="emit('update:accountRole', 'owner')">Owner</button>
+          <button type="button" class="rounded-lg border p-2 text-sm" :class="accountRole === 'staff' ? 'border-primary bg-primary/10' : 'border-border'" @click="emit('update:accountRole', 'staff')">Staf</button>
+        </div>
+        <p class="text-xs text-muted-foreground">Akun staf memilih outlet setelah pendaftaran.</p>
       </div>
       <div class="space-y-2">
         <Label for="email">Email</Label>

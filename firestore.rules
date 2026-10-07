@@ -7,7 +7,9 @@ service cloud.firestore {
     }
 
     function member(storeId) {
-      return signedIn() && exists(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid));
+      return signedIn() && exists(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid))
+        && (get(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid)).data.status == 'active'
+          || get(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid)).data.role == 'owner');
     }
 
     function owner(storeId) {
@@ -15,13 +17,17 @@ service cloud.firestore {
     }
 
     match /stores/{storeId} {
-      allow read: if member(storeId);
+      allow read: if member(storeId) || (signedIn() && resource.data.staff_signup_enabled == true);
       allow create: if signedIn() && request.resource.data.owner_id == request.auth.uid;
       allow update, delete: if owner(storeId);
 
       match /members/{userId} {
-        allow read: if member(storeId);
-        allow create: if signedIn() && userId == request.auth.uid;
+        allow read: if member(storeId) || (signedIn() && userId == request.auth.uid);
+        allow create: if (owner(storeId) && userId == request.auth.uid)
+          || (signedIn() && userId == request.auth.uid
+            && get(/databases/$(database)/documents/stores/$(storeId)).data.staff_signup_enabled == true
+            && request.resource.data.role == 'staff'
+            && request.resource.data.status == 'active');
         allow update, delete: if owner(storeId);
       }
 

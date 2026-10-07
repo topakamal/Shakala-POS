@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { cn } from '@/lib/utils'
 import { primaryNavItems, isNavActive } from './navItems'
+import { useAccountStore } from '@/stores/account'
 
 const route = useRoute()
+const account = useAccountStore()
+const visiblePrimaryNavItems = computed(() => primaryNavItems.filter((item) => item.to !== '/cashflow' || account.hasPermission('cashflow')))
 </script>
 
 <template>
@@ -11,7 +15,7 @@ const route = useRoute()
     class="sticky bottom-0 z-30 grid grid-cols-5 border-t border-border bg-card/95 backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden"
   >
     <RouterLink
-      v-for="item in primaryNavItems"
+      v-for="item in visiblePrimaryNavItems"
       :key="item.to"
       :to="item.to"
       class="flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors"

@@ -14,6 +14,9 @@ import {
   type AccountUser,
   type AccountStore,
   type AuthPayload,
+  type PublicStore,
+  type StaffMember,
+  type StaffPermission,
 } from '@/services/api/client'
 import { ENV_API_BASE_URL } from '@/services/api/config'
 import { signInWithGoogle, signOutGoogle } from '@/services/auth/google'
@@ -33,7 +36,7 @@ import type { ChangeEnvelope, PullResult, PushResult } from '@/services/sync/typ
 
 interface PosCloudApi {
   loginEmail(email: string, password: string): Promise<AuthPayload>
-  registerEmail(name: string, email: string, password: string): Promise<AuthPayload>
+  registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff'): Promise<AuthPayload>
   loginGoogle(idToken: string): Promise<AuthPayload>
   logout(): Promise<void>
   createStore(name: string): Promise<{ store: AccountStore; stores: AccountStore[] }>
@@ -41,6 +44,11 @@ interface PosCloudApi {
   changePassword(currentPassword: string, nextPassword: string): Promise<void>
   deleteStore(id: string | number): Promise<{ stores: AccountStore[]; currentStoreId: string | null }>
   resetStore(storeId: string, password: string): Promise<void>
+  availableStores(): Promise<{ stores: PublicStore[] }>
+  joinStore(storeId: string): Promise<AuthPayload>
+  staff(storeId: string): Promise<{ staff: StaffMember[] }>
+  updateStaff(storeId: string, uid: string, patch: { role?: 'staff' | 'manager'; permissions?: StaffPermission[] }): Promise<StaffMember>
+  dismissStaff(storeId: string, uid: string): Promise<void>
   syncPush(changes: ChangeEnvelope[]): Promise<PushResult>
   syncPull(entity: string, since: number): Promise<PullResult>
 }
@@ -69,6 +77,8 @@ export const useAccountStore = defineStore('account', () => {
   const token = ref<string | null>(null)
   const user = ref<AccountUser | null>(null)
   const stores = ref<AccountStore[]>([])
+  const availableStoreOptions = ref<PublicStore[]>([])
+  const staffMembers = ref<StaffMember[]>([])
   const currentStoreId = ref<string | null>(null)
   const status = ref<'idle' | 'loading'>('idle')
   const error = ref<string | null>(null)
@@ -77,6 +87,9 @@ export const useAccountStore = defineStore('account', () => {
   const currentStore = computed(
     () => stores.value.find((s) => String(s.id) === currentStoreId.value) ?? null,
   )
+  function hasPermission(permission: StaffPermission): boolean {
+    return user.value?.account_role === 'owner' || user.value?.permissions?.includes(permission) === true
+  }
 
   function repo() {
     return new SettingsRepository(getDb())
@@ -108,7 +121,7 @@ export const useAccountStore = defineStore('account', () => {
   const api: PosCloudApi = useFirebase
     ? {
         loginEmail: (email, password) => firebaseApi.loginEmail(email, password),
-        registerEmail: (name, email, password) => firebaseApi.registerEmail(name, email, password),
+        registerEmail: (name, email, password, role) => firebaseApi.registerEmail(name, email, password, role),
         loginGoogle: async () => {
           throw new Error('Login Google Firebase belum diaktifkan. Gunakan email dan password.')
         },
@@ -118,6 +131,11 @@ export const useAccountStore = defineStore('account', () => {
         changePassword: (current, next) => firebaseApi.changePassword(current, next),
         deleteStore: (id) => firebaseApi.deleteStore(id),
         resetStore: (storeId, password) => firebaseApi.resetStore(storeId, password),
+        availableStores: () => firebaseApi.availableStores(),
+        joinStore: (storeId) => firebaseApi.joinStore(storeId),
+        staff: (storeId) => firebaseApi.staff(storeId),
+        updateStaff: (storeId, uid, patch) => firebaseApi.updateStaff(storeId, uid, patch),
+        dismissStaff: (storeId, uid) => firebaseApi.dismissStaff(storeId, uid),
         syncPush: (changes) => {
           if (!currentStoreId.value) throw new Error('Toko Firebase belum dipilih.')
           return firebaseApi.syncPush(changes, currentStoreId.value)
@@ -198,8 +216,31 @@ export const useAccountStore = defineStore('account', () => {
     return withLogin(() => api.loginEmail(email, password))
   }
 
-  function registerEmail(name: string, email: string, password: string): Promise<boolean> {
-    return withLogin(() => api.registerEmail(name, email, password))
+  function registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff' = 'owner'): Promise<boolean> {
+    return withLogin(() => api.registerEmail(name, email, password, role))
+  }
+
+  async function loadAvailableStores(): Promise<void> {
+    try { availableStoreOptions.value = (await api.availableStores()).stores } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+  }
+
+  async function joinStore(id: string): Promise<boolean> {
+    try { await applyAuth(await api.joinStore(id)); availableStoreOptions.value = []; return true } catch (e) { error.value = e instanceof Error ? e.message : String(e); return false }
+  }
+
+  async function loadStaff(): Promise<void> {
+    if (!currentStoreId.value || user.value?.account_role !== 'owner') { staffMembers.value = []; return }
+    try { staffMembers.value = (await api.staff(currentStoreId.value)).staff } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+  }
+
+  async function updateStaff(uid: string, patch: { role?: 'staff' | 'manager'; permissions?: StaffPermission[] }): Promise<boolean> {
+    if (!currentStoreId.value) return false
+    try { const next = await api.updateStaff(currentStoreId.value, uid, patch); const i = staffMembers.value.findIndex((m) => m.uid === uid); if (i >= 0) staffMembers.value[i] = next; return true } catch (e) { error.value = e instanceof Error ? e.message : String(e); return false }
+  }
+
+  async function dismissStaff(uid: string): Promise<boolean> {
+    if (!currentStoreId.value) return false
+    try { await api.dismissStaff(currentStoreId.value, uid); const member = staffMembers.value.find((m) => m.uid === uid); if (member) member.status = 'dismissed'; return true } catch (e) { error.value = e instanceof Error ? e.message : String(e); return false }
   }
 
   function loginGoogle(): Promise<boolean> {
@@ -338,6 +379,8 @@ export const useAccountStore = defineStore('account', () => {
     token.value = null
     user.value = null
     stores.value = []
+    availableStoreOptions.value = []
+    staffMembers.value = []
     currentStoreId.value = null
     await repo().setMany({
       [KEYS.user]: '',
@@ -378,16 +421,24 @@ export const useAccountStore = defineStore('account', () => {
     token,
     user,
     stores,
+    availableStoreOptions,
+    staffMembers,
     currentStoreId,
     status,
     error,
     isAuthenticated,
     currentStore,
+    hasPermission,
     api,
     load,
     setBaseUrl,
     loginEmail,
     registerEmail,
+    loadAvailableStores,
+    joinStore,
+    loadStaff,
+    updateStaff,
+    dismissStaff,
     loginGoogle,
     setCurrentStore,
     createStore,

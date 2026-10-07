@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAccountStore } from '@/stores/account'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', name: 'home', component: () => import('@/pages/HomePage.vue') },
@@ -141,5 +142,17 @@ router.beforeEach((to) => {
   }
   if (!auth.isLocked && to.name === 'lock') {
     return { path: '/' }
+  }
+  const account = useAccountStore()
+  if (account.user?.account_role === 'staff') {
+    if (!account.currentStoreId && to.name !== 'connect') return { name: 'connect' }
+    const required: Record<string, 'cashier' | 'products' | 'cashflow' | 'reports' | 'settings'> = {
+      products: 'products', 'product-new': 'products', 'product-edit': 'products', categories: 'products',
+      pos: 'cashier', 'pos-scan': 'cashier', transactions: 'cashier', 'transaction-detail': 'cashier', cashier: 'cashier',
+      cashflow: 'cashflow', 'cashflow-new': 'cashflow', 'cashflow-categories': 'cashflow', 'cashflow-edit': 'cashflow',
+      reports: 'reports', printer: 'settings', settings: 'settings',
+    }
+    const permission = required[String(to.name)]
+    if (permission && !account.hasPermission(permission)) return { name: 'home' }
   }
 })

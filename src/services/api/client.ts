@@ -19,12 +19,32 @@ export interface AccountUser {
   email: string
   avatar_url: string | null
   current_store_id: string | number | null
+  account_role?: 'owner' | 'staff'
+  permissions?: StaffPermission[]
 }
 
 export interface AccountStore {
   id: string | number
   name: string
   role: string
+  status?: 'active' | 'dismissed'
+}
+
+export const STAFF_PERMISSIONS = ['cashier', 'products', 'cashflow', 'reports', 'settings'] as const
+export type StaffPermission = (typeof STAFF_PERMISSIONS)[number]
+
+export interface StaffMember {
+  uid: string
+  name: string
+  email: string
+  role: 'staff' | 'manager'
+  status: 'active' | 'dismissed'
+  permissions: StaffPermission[]
+}
+
+export interface PublicStore {
+  id: string
+  name: string
 }
 
 export interface AuthPayload {
@@ -110,8 +130,8 @@ export class ApiClient {
     return this.request('POST', '/auth/login', { email, password })
   }
 
-  registerEmail(name: string, email: string, password: string): Promise<AuthPayload> {
-    return this.request('POST', '/auth/register', { name, email, password })
+  registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff' = 'owner'): Promise<AuthPayload> {
+    return this.request('POST', '/auth/register', { name, email, password, role })
   }
 
   me(): Promise<{ user: AccountUser; stores: AccountStore[] }> {
@@ -144,6 +164,26 @@ export class ApiClient {
 
   resetStore(storeId: string | number, password: string): Promise<void> {
     return this.request('POST', `/stores/${storeId}/reset`, { password })
+  }
+
+  availableStores(): Promise<{ stores: PublicStore[] }> {
+    return this.request('GET', '/stores/available-for-staff')
+  }
+
+  joinStore(storeId: string): Promise<AuthPayload> {
+    return this.request('POST', `/stores/${storeId}/join`)
+  }
+
+  staff(storeId: string): Promise<{ staff: StaffMember[] }> {
+    return this.request('GET', `/stores/${storeId}/staff`)
+  }
+
+  updateStaff(storeId: string, uid: string, patch: { role?: 'staff' | 'manager'; permissions?: StaffPermission[] }): Promise<StaffMember> {
+    return this.request('PATCH', `/stores/${storeId}/staff/${uid}`, patch)
+  }
+
+  dismissStaff(storeId: string, uid: string): Promise<void> {
+    return this.request('POST', `/stores/${storeId}/staff/${uid}/dismiss`)
   }
 
   // ── Sync ────────────────────────────────────────────────────────────────
