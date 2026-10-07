@@ -44,8 +44,7 @@ async function openCameraPreview(mount: HTMLElement): Promise<{ stream: MediaStr
       video.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;background:#000'
       video.srcObject = stream
       mount.replaceChildren(video)
-      video.load()
-      await video.play()
+      await playWithTimeout(video)
       await waitForFirstFrame(video)
       return { stream, video }
     } catch (error) {
@@ -67,6 +66,32 @@ async function openCameraPreview(mount: HTMLElement): Promise<{ stream: MediaStr
   }
   mount.replaceChildren()
   throw lastError instanceof Error ? lastError : new Error('Kamera tidak bisa dibuka.')
+}
+
+function playWithTimeout(video: HTMLVideoElement, timeoutMs = 5000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const timeout = setTimeout(() => {
+      if (settled) return
+      settled = true
+      reject(new Error('Preview kamera tidak dapat diputar oleh WebView.'))
+    }, timeoutMs)
+
+    void video.play().then(
+      () => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        resolve()
+      },
+      (error) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        reject(error)
+      },
+    )
+  })
 }
 
 function waitForFirstFrame(video: HTMLVideoElement, timeoutMs = 7000): Promise<void> {

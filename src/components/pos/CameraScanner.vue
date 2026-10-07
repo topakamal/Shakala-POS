@@ -174,7 +174,10 @@ defineExpose({ stop, start })
     </template>
 
     <div v-if="starting" class="absolute inset-0 flex items-center justify-center">
-      <Loader2 class="size-8 animate-spin text-white/70" />
+      <div class="flex flex-col items-center gap-3 text-center">
+        <Loader2 class="size-8 animate-spin text-white/70" />
+        <p class="px-6 text-xs text-white/70">Menyiapkan kamera...</p>
+      </div>
     </div>
 
     <!-- Kegagalan izin/hardware: jangan tinggalin kotak hitam kosong -->
