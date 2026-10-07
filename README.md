@@ -62,11 +62,12 @@ Salin `.env.example` → `.env`:
 ## Rilis (CI)
 
 APK di-build **otomatis** oleh GitHub Actions (`.github/workflows/release-apk.yml`)
-tiap **Release** di-publish. Cara rilis:
+ketika tag versi didorong ke GitHub. Cara rilis:
 
-1. Buat **Release** baru di GitHub dengan tag **`vX.Y.Z`** (semver, mis. `v1.3.0`).
-2. Workflow jalan → build APK **debug-signed** → APK `pos-kacaw-X.Y.Z.apk`
-   **otomatis nempel** di halaman Release itu. Tinggal unduh & side-load.
+1. Buat tag semver, misalnya `v2.0.15`.
+2. Push tag: `git push origin v2.0.15`.
+3. Workflow otomatis membuat GitHub Release, menghasilkan release notes, build APK
+   **debug-signed**, lalu menempelkan `shakala-pos-2.0.15.apk` ke Release.
 
 Versi app diturunkan dari tag: `versionName = X.Y.Z`,
 `versionCode = X*10000 + Y*100 + Z` (mis. `v1.3.0` → `10300`, selalu naik). Tag
