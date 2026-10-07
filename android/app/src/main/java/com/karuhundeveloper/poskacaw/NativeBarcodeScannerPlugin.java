@@ -177,9 +177,16 @@ public class NativeBarcodeScannerPlugin extends Plugin {
             call.reject("Kamera belum aktif.", "camera_not_started");
             return;
         }
-        camera.getCameraControl().enableTorch(call.getBoolean("enabled", false))
-            .addOnSuccessListener(result -> call.resolve())
-            .addOnFailureListener(error -> call.reject("Senter tidak tersedia.", "torch_failed"));
+        ListenableFuture<Void> torchFuture = camera.getCameraControl()
+            .enableTorch(call.getBoolean("enabled", false));
+        torchFuture.addListener(() -> {
+            try {
+                torchFuture.get();
+                call.resolve();
+            } catch (Exception error) {
+                call.reject("Senter tidak tersedia.", "torch_failed");
+            }
+        }, ContextCompat.getMainExecutor(getContext()));
     }
 
     @PluginMethod
