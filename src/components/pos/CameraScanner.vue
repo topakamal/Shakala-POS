@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, shallowRef } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { Button } from '@/components/ui/button'
 import { CameraOff, Flashlight, FlashlightOff, Loader2 } from 'lucide-vue-next'
 import { capabilities } from '@/services/capabilities/registry'
@@ -100,8 +101,8 @@ defineExpose({ stop, start })
 </script>
 
 <template>
-  <div class="relative size-full overflow-hidden bg-black">
-    <!-- <video> di-inject ke sini oleh WebScanner.start({ mount }) -->
+  <div :class="['relative size-full overflow-hidden', Capacitor.isNativePlatform() ? 'bg-transparent' : 'bg-black']">
+    <!-- Web: <video> di-inject; Android: PreviewView native tampil di belakang -->
     <div ref="mount" class="size-full" />
 
     <!-- Bingkai sasaran + hint -->

@@ -4,6 +4,7 @@ import { WebPreviewPrinter } from './printers/webPreviewPrinter'
 import { ThermalPrinter } from './printers/thermalPrinter'
 import { setPrinterTransport } from './printers/transport'
 import { CapacitorThermalTransport } from './printers/capacitorThermalTransport'
+import { NativeScanner } from './scanner/nativeScanner'
 import { WebScanner } from './scanner/webScanner'
 
 /**
@@ -17,13 +18,12 @@ import { WebScanner } from './scanner/webScanner'
  * - **Web:** `WebPreviewPrinter` (cetak via dialog browser) sebagai fallback dev.
  *
  * Scanner:
- * - `WebScanner` (`getUserMedia` + `<video>` inline) dipakai di **dua platform**.
- *   Di Android, WebView Capacitor yang minta izin kamera runtime-nya, dan
- *   decode-nya jatuh ke `BarcodeDetector` bawaan platform (mesin ML Kit yang
- *   sama) — jadi tanpa plugin native pun kualitasnya setara, sementara preview
- *   tetap elemen DOM biasa sehingga layout kamera-setengah-layar gampang.
- *   Kalau nanti butuh engine native (mis. ML Kit langsung), tinggal daftarkan
- *   implementasi lain di sini — `ScannerCapability` yang jadi kontraknya.
+ * - **Android:** `NativeScanner` memakai CameraX + ML Kit. Preview native
+ *   ditempatkan di belakang area transparan WebView dan hasil scan dikirim
+ *   sebagai event Capacitor.
+ * - **Web:** `WebScanner` memakai `getUserMedia()` + `<video>` inline.
+ *   Kontrak `ScannerCapability` menjaga halaman kasir tetap sama di kedua
+ *   platform.
  */
 export function registerCapabilities(): void {
   if (Capacitor.isNativePlatform()) {
@@ -33,5 +33,5 @@ export function registerCapabilities(): void {
     capabilities.register(new WebPreviewPrinter())
   }
 
-  capabilities.register(new WebScanner())
+  capabilities.register(Capacitor.isNativePlatform() ? new NativeScanner() : new WebScanner())
 }
