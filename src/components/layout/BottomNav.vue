@@ -7,7 +7,7 @@ import { useAccountStore } from '@/stores/account'
 
 const route = useRoute()
 const account = useAccountStore()
-const visiblePrimaryNavItems = computed(() => primaryNavItems.filter((item) => item.to !== '/cashflow' || account.hasPermission('cashflow')))
+const visiblePrimaryNavItems = computed(() => primaryNavItems.filter((item) => account.user?.account_role !== 'staff' || item.to !== '/cashflow' || account.hasPermission('cashflow')))
 </script>
 
 <template>

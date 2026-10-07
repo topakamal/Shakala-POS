@@ -88,7 +88,9 @@ export const useAccountStore = defineStore('account', () => {
     () => stores.value.find((s) => String(s.id) === currentStoreId.value) ?? null,
   )
   function hasPermission(permission: StaffPermission): boolean {
-    return user.value?.account_role === 'owner' || user.value?.permissions?.includes(permission) === true
+    // Permission hanya membatasi akun staf cloud. Pengguna lokal dan owner
+    // tetap dapat memakai seluruh fitur aplikasi.
+    return !user.value || user.value.account_role === 'owner' || user.value.permissions?.includes(permission) === true
   }
 
   function repo() {
