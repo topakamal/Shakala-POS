@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.karuhundeveloper.poskacaw',
-  appName: 'Shakala POS',
+  appName: 'Di Kasirin',
   webDir: 'dist',
   plugins: {
     CapacitorSQLite: {

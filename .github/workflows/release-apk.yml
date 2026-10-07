@@ -98,6 +98,6 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
-          name: Shakala POS ${{ steps.version.outputs.name }}
+          name: Di Kasirin ${{ steps.version.outputs.name }}
           generate_release_notes: true
           files: dist/shakala-pos-${{ steps.version.outputs.name }}.apk

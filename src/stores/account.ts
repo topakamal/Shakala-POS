@@ -38,6 +38,9 @@ interface PosCloudApi {
   logout(): Promise<void>
   createStore(name: string): Promise<{ store: AccountStore; stores: AccountStore[] }>
   renameStore(id: string | number, name: string): Promise<{ store: AccountStore }>
+  changePassword(currentPassword: string, nextPassword: string): Promise<void>
+  deleteStore(id: string | number): Promise<{ stores: AccountStore[]; currentStoreId: string | null }>
+  resetStore(storeId: string, password: string): Promise<void>
   syncPush(changes: ChangeEnvelope[]): Promise<PushResult>
   syncPull(entity: string, since: number): Promise<PullResult>
 }
@@ -112,6 +115,9 @@ export const useAccountStore = defineStore('account', () => {
         logout: () => firebaseApi.logout(),
         createStore: (name) => firebaseApi.createStore(name),
         renameStore: (id, name) => firebaseApi.renameStore(id, name),
+        changePassword: (current, next) => firebaseApi.changePassword(current, next),
+        deleteStore: (id) => firebaseApi.deleteStore(id),
+        resetStore: (storeId, password) => firebaseApi.resetStore(storeId, password),
         syncPush: (changes) => {
           if (!currentStoreId.value) throw new Error('Toko Firebase belum dipilih.')
           return firebaseApi.syncPush(changes, currentStoreId.value)
@@ -274,6 +280,59 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
+  async function changePassword(currentPassword: string, nextPassword: string): Promise<boolean> {
+    status.value = 'loading'
+    error.value = null
+    try {
+      await api.changePassword(currentPassword, nextPassword)
+      return true
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      return false
+    } finally {
+      status.value = 'idle'
+    }
+  }
+
+  async function deleteStore(id: string | number): Promise<boolean> {
+    error.value = null
+    try {
+      return await SyncEngine.duringOutletTransition(async () => {
+        if (!(await canTransitionOutlets())) return false
+        const res = await api.deleteStore(id)
+        stores.value = res.stores
+        await persistStores()
+        await resetLocalBusinessData()
+        useMediaStore().clear()
+        currentStoreId.value = res.currentStoreId
+        await repo().set(KEYS.storeId, res.currentStoreId ?? '')
+        return true
+      })
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      return false
+    }
+  }
+
+  async function resetCloudData(password: string): Promise<boolean> {
+    error.value = null
+    if (!currentStoreId.value) {
+      error.value = 'Belum ada outlet aktif.'
+      return false
+    }
+    try {
+      return await SyncEngine.duringOutletTransition(async () => {
+        await api.resetStore(currentStoreId.value!, password)
+        await resetLocalBusinessData()
+        useMediaStore().clear()
+        return true
+      })
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      return false
+    }
+  }
+
   async function clearSession(): Promise<void> {
     await clearAccountCredential(credentialStorage())
     token.value = null
@@ -333,6 +392,9 @@ export const useAccountStore = defineStore('account', () => {
     setCurrentStore,
     createStore,
     renameStore,
+    changePassword,
+    deleteStore,
+    resetCloudData,
     logout,
   }
 })

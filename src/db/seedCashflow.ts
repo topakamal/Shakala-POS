@@ -1,6 +1,5 @@
 import type { Db } from './types'
 import { nowMs } from '@/lib/datetime'
-import { uuid } from '@/lib/uuid'
 
 /**
  * Kategori cashflow bawaan yang **selalu dijamin ada** (dipanggil tiap boot &
@@ -24,6 +23,13 @@ export const DEFAULT_CASHFLOW_CATEGORIES: ReadonlyArray<{
   { name: 'Lain-lain', type: 'expense', isSystem: 0 },
 ]
 
+/** ID tetap supaya kategori bawaan yang dibuat di perangkat berbeda tetap
+ * merujuk ke kategori yang sama saat cashflow disinkronkan. */
+export function defaultCashflowCategoryId(name: string, type: 'income' | 'expense'): string {
+  const key = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  return `cashflow-default-${type}-${key}`
+}
+
 /**
  * Isi kategori cashflow default yang belum ada. **Idempotent by name**: kategori
  * yang namanya sudah ada (belum terhapus) dilewati, jadi aman dipanggil berulang
@@ -35,16 +41,17 @@ export async function seedDefaultCashflowCategories(db: Db): Promise<void> {
   const t = nowMs()
   for (let i = 0; i < DEFAULT_CASHFLOW_CATEGORIES.length; i++) {
     const c = DEFAULT_CASHFLOW_CATEGORIES[i]
+    const id = defaultCashflowCategoryId(c.name, c.type)
     const existing = await db.query<{ id: string }>(
-      `SELECT id FROM cashflow_categories WHERE name = ? AND deleted_at IS NULL LIMIT 1`,
-      [c.name],
+      `SELECT id FROM cashflow_categories WHERE id = ? OR (name = ? AND type = ? AND deleted_at IS NULL) LIMIT 1`,
+      [id, c.name, c.type],
     )
     if (existing.length > 0) continue
     await db.run(
       `INSERT INTO cashflow_categories
          (id, name, type, is_system, sort_order, created_at, updated_at, dirty, sync_version)
        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)`,
-      [uuid(), c.name, c.type, c.isSystem, i, t, t],
+      [id, c.name, c.type, c.isSystem, i, t, t],
     )
   }
 }

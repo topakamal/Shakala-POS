@@ -134,6 +134,18 @@ export class ApiClient {
     return this.request('PATCH', `/stores/${id}`, { name })
   }
 
+  changePassword(currentPassword: string, nextPassword: string): Promise<void> {
+    return this.request('POST', '/auth/password', { current_password: currentPassword, password: nextPassword })
+  }
+
+  deleteStore(id: string | number): Promise<{ stores: AccountStore[]; currentStoreId: string | null }> {
+    return this.request('DELETE', `/stores/${id}`)
+  }
+
+  resetStore(storeId: string | number, password: string): Promise<void> {
+    return this.request('POST', `/stores/${storeId}/reset`, { password })
+  }
+
   // ── Sync ────────────────────────────────────────────────────────────────
   async syncPush(changes: ChangeEnvelope[]): Promise<PushResult> {
     const response = await this.request<unknown>('POST', '/sync/push', { changes })

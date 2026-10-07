@@ -1,8 +1,11 @@
 import {
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   getIdToken,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
   type User,
 } from 'firebase/auth'
 import {
@@ -15,6 +18,8 @@ import {
   runTransaction,
   setDoc,
   updateDoc,
+  writeBatch,
+  type DocumentReference,
   where,
 } from 'firebase/firestore'
 import { firebaseAuth, firebaseDb } from './config'
@@ -30,6 +35,11 @@ const storeRef = (id: string) => doc(firebaseDb, 'stores', id)
 const memberRef = (storeId: string, uid: string) => doc(firebaseDb, 'stores', storeId, 'members', uid)
 const entityRef = (storeId: string, entity: string, id: string) =>
   doc(firebaseDb, 'stores', storeId, entity, id)
+
+const SYNC_ENTITIES = [
+  'categories', 'products', 'media', 'cashier_sessions', 'sales', 'sale_items',
+  'cashflow_categories', 'cashflow_entries',
+] as const
 
 interface ProfileData {
   name: string
@@ -125,6 +135,55 @@ export class FirebaseApiClient {
     await updateDoc(storeRef(String(id)), { name: store.name })
     await updateDoc(profileRef(user.uid), { stores: profile.stores.map((item) => item.id === existing.id ? store : item) })
     return { store }
+  }
+
+  private async requireOwner(storeId: string): Promise<User> {
+    const user = requireUser()
+    const store = await getDoc(storeRef(storeId))
+    if (!store.exists() || store.data()?.owner_id !== user.uid) throw new Error('Hanya owner yang dapat melakukan tindakan ini.')
+    return user
+  }
+
+  private async deleteStoreChildren(storeId: string, includeStore: boolean): Promise<void> {
+    const refs: DocumentReference[] = []
+    for (const entity of SYNC_ENTITIES) {
+      const rows = await getDocs(collection(firebaseDb, 'stores', storeId, entity))
+      refs.push(...rows.docs.map((row) => row.ref))
+    }
+    const members = await getDocs(collection(firebaseDb, 'stores', storeId, 'members'))
+    refs.push(...members.docs.map((row) => row.ref))
+    if (includeStore) refs.push(storeRef(storeId))
+    for (let i = 0; i < refs.length; i += 450) {
+      const batch = writeBatch(firebaseDb)
+      for (const reference of refs.slice(i, i + 450)) batch.delete(reference)
+      await batch.commit()
+    }
+  }
+
+  async changePassword(currentPassword: string, nextPassword: string): Promise<void> {
+    const user = requireUser()
+    if (!user.email) throw new Error('Akun ini tidak menggunakan login email dan password.')
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword))
+    await updatePassword(user, nextPassword)
+  }
+
+  async deleteStore(id: string | number): Promise<{ stores: AccountStore[]; currentStoreId: string | null }> {
+    const user = await this.requireOwner(String(id))
+    const profile = await this.stores()
+    if (!profile.stores.some((store) => String(store.id) === String(id))) throw new Error('Outlet tidak ditemukan.')
+    await this.deleteStoreChildren(String(id), true)
+    const stores = profile.stores.filter((store) => String(store.id) !== String(id))
+    const currentStoreId = stores[0] ? String(stores[0].id) : null
+    await updateDoc(profileRef(user.uid), { stores, current_store_id: currentStoreId })
+    return { stores, currentStoreId }
+  }
+
+  async resetStore(storeId: string, password: string): Promise<void> {
+    const user = await this.requireOwner(storeId)
+    if (!user.email) throw new Error('Akun ini tidak menggunakan login email dan password.')
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
+    await this.deleteStoreChildren(storeId, false)
+    await setDoc(memberRef(storeId, user.uid), { role: 'owner', uid: user.uid })
   }
 
   async syncPush(changes: ChangeEnvelope[], storeId: string): Promise<PushResult> {

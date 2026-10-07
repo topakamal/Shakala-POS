@@ -30,7 +30,7 @@ const gate = createScanGate({ sameCodeMs: props.sameCodeMs })
 
 const MESSAGES: Record<string, string> = {
   denied:
-    'Izin kamera ditolak. Buka Setelan → Aplikasi → Shakala POS → Izin → Kamera, lalu coba lagi.',
+    'Izin kamera ditolak. Buka Setelan → Aplikasi → Di Kasirin → Izin → Kamera, lalu coba lagi.',
   notfound: 'Kamera tidak ditemukan di perangkat ini.',
   unsupported: 'Perangkat ini tidak mendukung akses kamera dari aplikasi.',
   other: 'Kamera gagal dinyalakan.',
