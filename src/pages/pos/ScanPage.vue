@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
     />
 
     <!-- Kamera: setengah layar bagian atas, sisanya keranjang -->
-    <div class="relative h-[45dvh] shrink-0 bg-black">
+    <div class="relative h-[45dvh] shrink-0">
       <CameraScanner ref="scanner" hint="Arahkan barcode produk ke dalam kotak" @scan="onScan" />
 
       <Transition name="toast">
