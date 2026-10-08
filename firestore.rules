@@ -23,7 +23,7 @@ service cloud.firestore {
 
       match /members/{userId} {
         allow read: if member(storeId) || (signedIn() && userId == request.auth.uid);
-        allow create: if (owner(storeId) && userId == request.auth.uid)
+        allow create: if (owner(storeId) && (userId == request.auth.uid || request.resource.data.role in ['staff', 'manager']))
           || (signedIn() && userId == request.auth.uid
             && get(/databases/$(database)/documents/stores/$(storeId)).data.staff_signup_enabled == true
             && request.resource.data.role == 'staff'

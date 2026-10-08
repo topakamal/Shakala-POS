@@ -28,9 +28,11 @@ export interface AccountStore {
   name: string
   role: string
   status?: 'active' | 'dismissed'
+  logo_ref?: string | null
 }
 
-export const STAFF_PERMISSIONS = ['cashier', 'products', 'cashflow', 'reports', 'settings'] as const
+export const STAFF_PERMISSIONS = ['cashier', 'reports', 'settings', 'products', 'cashflow'] as const
+export const DEFAULT_STAFF_PERMISSIONS: StaffPermission[] = ['cashier', 'reports', 'settings']
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number]
 
 export interface StaffMember {
@@ -184,6 +186,14 @@ export class ApiClient {
 
   dismissStaff(storeId: string, uid: string): Promise<void> {
     return this.request('POST', `/stores/${storeId}/staff/${uid}/dismiss`)
+  }
+
+  transferStaff(fromStoreId: string, toStoreId: string, uid: string): Promise<void> {
+    return this.request('POST', `/stores/${fromStoreId}/staff/${uid}/transfer`, { to_store_id: toStoreId })
+  }
+
+  updateStoreBranding(id: string | number, name: string, logoRef: string | null): Promise<{ store: AccountStore }> {
+    return this.request('PATCH', `/stores/${id}`, { name, logo_ref: logoRef })
   }
 
   // ── Sync ────────────────────────────────────────────────────────────────

@@ -103,6 +103,7 @@ async function chooseLogo() {
     const img = await downscale(dataUrl, { maxDim: 256, mime: 'image/png' })
     const ref_ = await media.save(img)
     await settings.setLogo(ref_) // langsung ke-update di Home & splash
+    if (account.isAuthenticated) await account.updateStoreBranding(name.value.trim() || storeName.value, ref_)
   } finally {
     logoBusy.value = false
   }
@@ -110,11 +111,14 @@ async function chooseLogo() {
 
 async function removeLogo() {
   await settings.setLogo(null)
+  if (account.isAuthenticated) await account.updateStoreBranding(name.value.trim() || storeName.value, null)
 }
 
 async function saveProfile() {
   savingProfile.value = true
-  await settings.setProfile(name.value.trim() || 'POS Kacaw', owner.value.trim())
+  const nextName = name.value.trim() || 'Di Kasirin'
+  await settings.setProfile(nextName, owner.value.trim())
+  if (account.isAuthenticated) await account.updateStoreBranding(nextName, storeLogo.value)
   savingProfile.value = false
   savedFlash.value = true
   setTimeout(() => (savedFlash.value = false), 1500)
@@ -244,7 +248,7 @@ function lockNow() {
             </div>
             <div class="space-y-1.5">
               <Label for="store-name">Nama Toko</Label>
-              <Input id="store-name" v-model="name" placeholder="POS Kacaw" />
+            <Input id="store-name" v-model="name" placeholder="Nama outlet" />
             </div>
             <div class="space-y-1.5">
               <Label for="store-owner">Pemilik</Label>
@@ -446,7 +450,7 @@ function lockNow() {
       <!-- Info perangkat -->
       <div class="flex items-center justify-center gap-2 pb-2 text-xs text-muted-foreground">
         <Smartphone class="size-3.5" />
-        Device: {{ devicePrefix }} · POS Kacaw v0.1
+        Device: {{ devicePrefix }} · Di Kasirin v0.1
       </div>
     </div>
 

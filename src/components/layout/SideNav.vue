@@ -14,6 +14,9 @@ const settings = useSettingsStore()
 const media = useMediaStore()
 const { storeName, storeOwner, storeLogo } = storeToRefs(settings)
 const account = useAccountStore()
+const headerName = computed(() => account.isAuthenticated && account.currentStore ? account.currentStore.name : storeName.value)
+const headerOwner = computed(() => account.isAuthenticated ? (account.user?.name || storeOwner.value) : storeOwner.value)
+const headerLogo = computed(() => account.isAuthenticated && account.currentStore?.logo_ref ? account.currentStore.logo_ref : storeLogo.value)
 const visibleNavItems = computed(() => navItems.filter((item) => {
   if (item.to === '/products') return account.hasPermission('products')
   if (item.to === '/cashflow') return account.hasPermission('cashflow')
@@ -24,6 +27,7 @@ const visibleNavItems = computed(() => navItems.filter((item) => {
 
 onMounted(() => {
   if (storeLogo.value) media.ensure([storeLogo.value])
+  if (headerLogo.value) void media.ensure([headerLogo.value])
 })
 </script>
 
@@ -40,17 +44,17 @@ onMounted(() => {
         class="flex size-10 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary"
       >
         <img
-          v-if="media.url(storeLogo)"
-          :src="media.url(storeLogo)!"
+          v-if="media.url(headerLogo)"
+          :src="media.url(headerLogo)!"
           alt="Logo toko"
           class="size-full object-contain p-1"
         />
         <Store v-else class="size-5" />
       </div>
       <div class="min-w-0">
-        <p class="truncate text-sm font-bold leading-tight">{{ storeName }}</p>
+        <p class="truncate text-sm font-bold leading-tight">{{ headerName }}</p>
         <p class="truncate text-xs text-muted-foreground">
-          {{ storeOwner || 'POS Kacaw' }}
+          {{ headerOwner || 'Di Kasirin' }}
         </p>
       </div>
     </RouterLink>

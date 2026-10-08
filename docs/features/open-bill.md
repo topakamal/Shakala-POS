@@ -1,6 +1,6 @@
 # Fitur: Open Bill
 
-**Status:** ✅ Diimplementasikan · **Surface:** POS Kacaw (kasir) + POS Pro
+**Status:** ✅ Diimplementasikan · **Surface:** Di Kasirin (kasir) + POS Pro
 (riwayat/audit) · **Sync:** entity **sales** dan **sale_items**, kontrak API v1
 
 Open Bill menahan keranjang untuk dilanjutkan nanti tanpa menganggapnya sebagai

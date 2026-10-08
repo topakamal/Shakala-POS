@@ -1,4 +1,4 @@
-# Design System — POS Kacaw
+# Design System — Di Kasirin
 
 Rujukan visual untuk seluruh app. Tujuan: tampilan **konsisten & matang** dan
 **responsif dari HP sampai iPad**. Gaya: **monokrom** — **latar abu-abu netral

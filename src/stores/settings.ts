@@ -30,7 +30,7 @@ const KEYS = {
 
 export const useSettingsStore = defineStore('settings', () => {
   const loaded = ref(false)
-  const storeName = ref('POS Kacaw')
+  const storeName = ref('Di Kasirin')
   const storeOwner = ref('')
   const storeLogo = ref<string | null>(null) // ref media://<id>
   const loginEnabled = ref(false) // DEFAULT: tanpa login
@@ -58,7 +58,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function load() {
     const all = await repo().getAll()
-    storeName.value = all[KEYS.storeName] || 'POS Kacaw'
+    storeName.value = all[KEYS.storeName] || 'Di Kasirin'
     storeOwner.value = all[KEYS.storeOwner] || ''
     storeLogo.value = all[KEYS.storeLogo] || null
     loginEnabled.value = all[KEYS.loginEnabled] === '1'

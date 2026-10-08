@@ -49,6 +49,8 @@ interface PosCloudApi {
   staff(storeId: string): Promise<{ staff: StaffMember[] }>
   updateStaff(storeId: string, uid: string, patch: { role?: 'staff' | 'manager'; permissions?: StaffPermission[] }): Promise<StaffMember>
   dismissStaff(storeId: string, uid: string): Promise<void>
+  transferStaff(fromStoreId: string, toStoreId: string, uid: string): Promise<void>
+  updateStoreBranding(id: string | number, name: string, logoRef: string | null): Promise<{ store: AccountStore }>
   syncPush(changes: ChangeEnvelope[]): Promise<PushResult>
   syncPull(entity: string, since: number): Promise<PullResult>
 }
@@ -138,6 +140,8 @@ export const useAccountStore = defineStore('account', () => {
         staff: (storeId) => firebaseApi.staff(storeId),
         updateStaff: (storeId, uid, patch) => firebaseApi.updateStaff(storeId, uid, patch),
         dismissStaff: (storeId, uid) => firebaseApi.dismissStaff(storeId, uid),
+        transferStaff: (fromStoreId, toStoreId, uid) => firebaseApi.transferStaff(fromStoreId, toStoreId, uid),
+        updateStoreBranding: (id, name, logoRef) => firebaseApi.updateStoreBranding(id, name, logoRef),
         syncPush: (changes) => {
           if (!currentStoreId.value) throw new Error('Toko Firebase belum dipilih.')
           return firebaseApi.syncPush(changes, currentStoreId.value)
@@ -243,6 +247,33 @@ export const useAccountStore = defineStore('account', () => {
   async function dismissStaff(uid: string): Promise<boolean> {
     if (!currentStoreId.value) return false
     try { await api.dismissStaff(currentStoreId.value, uid); const member = staffMembers.value.find((m) => m.uid === uid); if (member) member.status = 'dismissed'; return true } catch (e) { error.value = e instanceof Error ? e.message : String(e); return false }
+  }
+
+  async function transferStaff(uid: string, toStoreId: string): Promise<boolean> {
+    if (!currentStoreId.value) return false
+    try {
+      await api.transferStaff(currentStoreId.value, toStoreId, uid)
+      const member = staffMembers.value.find((item) => item.uid === uid)
+      if (member) member.status = 'dismissed'
+      return true
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      return false
+    }
+  }
+
+  async function updateStoreBranding(name: string, logoRef: string | null): Promise<boolean> {
+    if (!currentStoreId.value || user.value?.account_role !== 'owner') return false
+    try {
+      const res = await api.updateStoreBranding(currentStoreId.value, name, logoRef)
+      const i = stores.value.findIndex((store) => String(store.id) === currentStoreId.value)
+      if (i >= 0) stores.value[i] = { ...stores.value[i], ...res.store }
+      await persistStores()
+      return true
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      return false
+    }
   }
 
   function loginGoogle(): Promise<boolean> {
@@ -441,6 +472,8 @@ export const useAccountStore = defineStore('account', () => {
     loadStaff,
     updateStaff,
     dismissStaff,
+    transferStaff,
+    updateStoreBranding,
     loginGoogle,
     setCurrentStore,
     createStore,

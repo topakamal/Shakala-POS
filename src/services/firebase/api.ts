@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth'
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -31,7 +32,7 @@ import type {
   StaffMember,
   StaffPermission,
 } from '@/services/api/client'
-import { STAFF_PERMISSIONS } from '@/services/api/client'
+import { DEFAULT_STAFF_PERMISSIONS, STAFF_PERMISSIONS } from '@/services/api/client'
 import type { ChangeEnvelope, PullResult, PushResult } from '@/services/sync/types'
 
 const profileRef = (uid: string) => doc(firebaseDb, 'users', uid)
@@ -71,7 +72,7 @@ function userShape(user: User, currentStoreId: string | null, accountRole: 'owne
     avatar_url: user.photoURL,
     current_store_id: currentStoreId,
     account_role: accountRole,
-    permissions: accountRole === 'owner' ? [...STAFF_PERMISSIONS] : permissions ?? ['cashier'],
+    permissions: accountRole === 'owner' ? [...STAFF_PERMISSIONS] : permissions ?? [...DEFAULT_STAFF_PERMISSIONS],
   }
 }
 
@@ -83,15 +84,31 @@ async function payloadFor(user: User): Promise<AuthPayload> {
   let currentPermissions: StaffPermission[] | undefined
   for (const store of profileStores) {
     const membership = await getDoc(memberRef(String(store.id), user.uid))
-    const status = membership.exists() && membership.data()?.status === 'dismissed' ? 'dismissed' : 'active'
+    const status = !membership.exists() || membership.data()?.status === 'dismissed' ? 'dismissed' : 'active'
     if (membership.exists() && status === 'active' && String(store.id) === String(data?.current_store_id)) {
-      currentPermissions = Array.isArray(membership.data()?.permissions) ? membership.data()?.permissions as StaffPermission[] : ['cashier']
+      currentPermissions = Array.isArray(membership.data()?.permissions) ? membership.data()?.permissions as StaffPermission[] : [...DEFAULT_STAFF_PERMISSIONS]
     }
-    stores.push({ ...store, status })
+    const cloudStore = membership.exists() ? await getDoc(storeRef(String(store.id))) : null
+    stores.push({ ...store, ...(cloudStore?.exists() ? { name: String(cloudStore.data()?.name ?? store.name), logo_ref: (cloudStore.data()?.logo_ref as string | null | undefined) ?? null } : {}), status })
+  }
+  if (data?.account_role === 'staff') {
+    const candidates = await getDocs(query(collection(firebaseDb, 'stores'), where('staff_signup_enabled', '==', true)))
+    for (const candidate of candidates.docs) {
+      if (stores.some((store) => String(store.id) === candidate.id)) continue
+      const membership = await getDoc(memberRef(candidate.id, user.uid))
+      if (!membership.exists() || membership.data()?.status !== 'active') continue
+      const candidateData = candidate.data()
+      stores.push({ id: candidate.id, name: String(candidateData.name ?? 'Outlet'), role: membership.data()?.role === 'manager' ? 'manager' : 'staff', status: 'active', logo_ref: (candidateData.logo_ref as string | null | undefined) ?? null })
+    }
   }
   const active = stores.filter((store) => store.status !== 'dismissed')
   const requested = data?.current_store_id ? active.find((store) => String(store.id) === String(data.current_store_id)) : null
   const currentStoreId = requested?.id || active[0]?.id || null
+  if (!currentPermissions && currentStoreId && data?.account_role === 'staff') {
+    const membership = await getDoc(memberRef(String(currentStoreId), user.uid))
+    const permissions = membership.data()?.permissions
+    currentPermissions = Array.isArray(permissions) ? permissions as StaffPermission[] : [...DEFAULT_STAFF_PERMISSIONS]
+  }
   return { token: await tokenOf(user), user: userShape(user, currentStoreId == null ? null : String(currentStoreId), data?.account_role ?? 'owner', currentPermissions), stores }
 }
 
@@ -166,7 +183,7 @@ export class FirebaseApiClient {
     const nextStore: AccountStore = { id: storeId, name: String(store.data()?.name ?? 'Outlet'), role: 'staff', status: 'active' }
     const stores = [...profile.stores.filter((item) => String(item.id) !== storeId), nextStore]
     await setDoc(memberRef(storeId, user.uid), {
-      uid: user.uid, role: 'staff', status: 'active', name: user.displayName || user.email?.split('@')[0] || 'Staf', email: user.email || '', permissions: ['cashier'],
+      uid: user.uid, role: 'staff', status: 'active', name: user.displayName || user.email?.split('@')[0] || 'Staf', email: user.email || '', permissions: DEFAULT_STAFF_PERMISSIONS,
     })
     await updateDoc(profileRef(user.uid), { stores, current_store_id: storeId, account_role: 'staff' })
     return payloadFor(user)
@@ -179,7 +196,7 @@ export class FirebaseApiClient {
     const result = await getDocs(collection(firebaseDb, 'stores', storeId, 'members'))
     const staff: StaffMember[] = result.docs.filter((row) => row.data().role !== 'owner').map((row): StaffMember => {
       const data = row.data()
-      return { uid: row.id, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: data.status === 'dismissed' ? 'dismissed' : 'active', permissions: Array.isArray(data.permissions) ? data.permissions.filter((p): p is StaffPermission => STAFF_PERMISSIONS.includes(p)) : ['cashier'] }
+      return { uid: row.id, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: data.status === 'dismissed' ? 'dismissed' : 'active', permissions: Array.isArray(data.permissions) ? data.permissions.filter((p): p is StaffPermission => STAFF_PERMISSIONS.includes(p)) : [...DEFAULT_STAFF_PERMISSIONS] }
     })
     return { staff }
   }
@@ -189,9 +206,9 @@ export class FirebaseApiClient {
     const reference = memberRef(storeId, uid)
     const current = await getDoc(reference)
     if (!current.exists() || current.data()?.role === 'owner') throw new Error('Staf tidak ditemukan.')
-    await updateDoc(reference, { ...patch, permissions: patch.permissions ?? current.data()?.permissions ?? ['cashier'] })
+    await updateDoc(reference, { ...patch, permissions: patch.permissions ?? current.data()?.permissions ?? DEFAULT_STAFF_PERMISSIONS })
     const data: Record<string, unknown> = { ...current.data(), ...patch }
-    return { uid, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: data.status === 'dismissed' ? 'dismissed' : 'active', permissions: Array.isArray(data.permissions) ? data.permissions as StaffPermission[] : ['cashier'] }
+    return { uid, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: data.status === 'dismissed' ? 'dismissed' : 'active', permissions: Array.isArray(data.permissions) ? data.permissions as StaffPermission[] : [...DEFAULT_STAFF_PERMISSIONS] }
   }
 
   async dismissStaff(storeId: string, uid: string): Promise<void> {
@@ -200,6 +217,29 @@ export class FirebaseApiClient {
     const current = await getDoc(reference)
     if (!current.exists() || current.data()?.role === 'owner') throw new Error('Staf tidak ditemukan.')
     await updateDoc(reference, { status: 'dismissed', dismissed_at: Date.now() })
+  }
+
+  async transferStaff(fromStoreId: string, toStoreId: string, uid: string): Promise<void> {
+    await this.requireOwner(fromStoreId)
+    await this.requireOwner(toStoreId)
+    if (fromStoreId === toStoreId) throw new Error('Outlet tujuan harus berbeda.')
+    const source = await getDoc(memberRef(fromStoreId, uid))
+    const targetStore = await getDoc(storeRef(toStoreId))
+    if (!source.exists() || source.data()?.role === 'owner') throw new Error('Staf tidak ditemukan.')
+    if (!targetStore.exists()) throw new Error('Outlet tujuan tidak ditemukan.')
+    await setDoc(memberRef(toStoreId, uid), { ...source.data(), status: 'active', transferred_at: Date.now() })
+    await deleteDoc(memberRef(fromStoreId, uid))
+  }
+
+  async updateStoreBranding(id: string | number, name: string, logoRef: string | null): Promise<{ store: AccountStore }> {
+    const user = await this.requireOwner(String(id))
+    const profile = await this.stores()
+    const existing = profile.stores.find((store) => String(store.id) === String(id))
+    if (!existing) throw new Error('Toko tidak ditemukan.')
+    const store: AccountStore = { ...existing, name: name.trim(), logo_ref: logoRef }
+    await updateDoc(storeRef(String(id)), { name: store.name, logo_ref: logoRef })
+    await updateDoc(profileRef(user.uid), { stores: profile.stores.map((item) => String(item.id) === String(id) ? store : item) })
+    return { store }
   }
 
   async renameStore(id: string | number, name: string): Promise<{ store: AccountStore }> {

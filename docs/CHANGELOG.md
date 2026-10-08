@@ -53,7 +53,7 @@ Tiap phase = satu rilis minor.
 ## [0.3.2] — 2026-08-14
 
 ### Changed — Identitas visual: ikon peluncur & splash sendiri
-- **Ikon bawaan Capacitor diganti lambang POS Kacaw**: struk dengan sobekan
+- **Ikon bawaan Capacitor diganti lambang Di Kasirin**: struk dengan sobekan
   bawah di atas kotak hitam-arang `#222933`. Satu sumber SVG menurunkan semua
   ukuran, jadi tidak ada varian yang ketinggalan waktu warnanya berubah.
 - Lengkap untuk semua density: legacy 48–192, round, dan **foreground adaptif**

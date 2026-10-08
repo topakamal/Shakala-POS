@@ -1,4 +1,4 @@
-# POS Kacaw — aplikasi kasir Android offline (POS gratis & open source)
+# Di Kasirin — aplikasi kasir Android offline (POS gratis & open source)
 
 Aplikasi **kasir / Point of Sale offline-first** untuk warung & UMKM. Kasir
 jalan **100% tanpa internet** — kelola produk, transaksi, barcode, buka/tutup

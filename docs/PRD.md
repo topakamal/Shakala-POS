@@ -1,10 +1,10 @@
-# PRD — POS Kacaw
+# PRD — Di Kasirin
 
 **Versi dokumen:** 0.1 · **Status:** aktif · **App id:** `com.karuhundeveloper.poskacaw`
 
 ## 1. Ringkasan
 
-POS Kacaw adalah aplikasi **Point of Sale offline-first** untuk warung/UMKM. Semua
+Di Kasirin adalah aplikasi **Point of Sale offline-first** untuk warung/UMKM. Semua
 fitur inti (kelola produk, transaksi, kasir, cashflow) jalan **100% tanpa internet**.
 Data disimpan lokal di SQLite pada perangkat. Arsitektur disiapkan agar bisa
 **upgrade ke "POS Pro"** (cloud): login online, sinkronisasi dua arah, dan plugin

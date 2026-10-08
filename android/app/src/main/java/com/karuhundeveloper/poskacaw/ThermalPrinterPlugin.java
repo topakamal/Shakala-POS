@@ -34,7 +34,7 @@ import java.util.Arrays;
 import java.util.UUID;
 
 /**
- * Transport printer thermal native (Bluetooth Classic SPP + USB) untuk POS Kacaw.
+ * Transport printer thermal native (Bluetooth Classic SPP + USB) untuk Di Kasirin.
  *
  * Byte ESC/POS sudah dibentuk di sisi JS (`src/lib/escpos.ts`), jadi plugin ini
  * cuma jadi "kabel": list device, buka koneksi, kirim byte mentah. Karena itu

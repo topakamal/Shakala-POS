@@ -69,7 +69,7 @@ async function testPrint() {
     await cap.value.print({
       title: 'Test Print',
       lines: [
-        { text: 'POS KACAW', align: 'center', bold: true, size: 'large' },
+        { text: 'DI KASIRIN', align: 'center', bold: true, size: 'large' },
         { text: 'Struk Percobaan', align: 'center' },
         { text: '' },
         { text: formatDateTime(nowMs()), align: 'center' },

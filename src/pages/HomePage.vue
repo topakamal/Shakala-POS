@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   ShoppingCart,
@@ -39,6 +39,18 @@ const menu = [
   { to: '/printer', label: 'Printer', desc: 'Cetak struk', icon: Printer },
   { to: '/settings', label: 'Akun & Setelan', desc: 'Login, PIN, toko', icon: UserCog },
 ]
+
+const headerName = computed(() => account.isAuthenticated && account.currentStore ? account.currentStore.name : storeName.value)
+const headerOwner = computed(() => account.isAuthenticated ? (account.user?.name || storeOwner.value) : storeOwner.value)
+const headerLogo = computed(() => account.isAuthenticated && account.currentStore?.logo_ref ? account.currentStore.logo_ref : storeLogo.value)
+const visibleMenu = computed(() => menu.filter((item) => {
+  if (item.to === '/products') return account.hasPermission('products')
+  if (item.to === '/cashflow') return account.hasPermission('cashflow')
+  if (item.to === '/reports') return account.hasPermission('reports')
+  if (item.to === '/printer' || item.to === '/settings') return account.hasPermission('settings')
+  return account.hasPermission('cashier')
+}))
+watch(headerLogo, (value) => { if (value) void media.ensure([value]) }, { immediate: true })
 </script>
 
 <template>
@@ -52,17 +64,17 @@ const menu = [
           class="flex size-12 items-center justify-center overflow-hidden rounded-2xl bg-white/15 backdrop-blur"
         >
           <img
-            v-if="media.url(storeLogo)"
-            :src="media.url(storeLogo)!"
+            v-if="media.url(headerLogo)"
+            :src="media.url(headerLogo)!"
             alt="Logo toko"
             class="size-full object-contain p-1"
           />
           <Store v-else class="size-6" />
         </div>
         <div class="min-w-0">
-          <p class="truncate text-lg font-bold leading-tight">{{ storeName }}</p>
+          <p class="truncate text-lg font-bold leading-tight">{{ headerName }}</p>
           <p class="truncate text-sm text-hero-foreground/70">
-            {{ storeOwner || 'Belum ada nama pemilik' }}
+            {{ headerOwner || 'Belum ada nama pemilik' }}
           </p>
         </div>
       </div>
@@ -99,7 +111,7 @@ const menu = [
       </p>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         <RouterLink
-          v-for="item in menu"
+          v-for="item in visibleMenu"
           :key="item.to"
           :to="item.to"
           class="group flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md active:scale-[.98]"

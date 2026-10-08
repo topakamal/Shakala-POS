@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, Check, AlertCircle, Plus, Pencil, Trash2, KeyRound, RotateCcw, UserRound, UserX, ShieldCheck } from 'lucide-vue-next'
+import { Loader2, LogOut, Check, AlertCircle, Plus, Pencil, Trash2, KeyRound, RotateCcw, UserRound, UserX, ShieldCheck, ArrowRightLeft } from 'lucide-vue-next'
 import { Capacitor } from '@capacitor/core'
 import { useAccountStore } from '@/stores/account'
 import { STAFF_PERMISSIONS, type StaffPermission } from '@/services/api/client'
@@ -160,6 +160,8 @@ const resetConfirm = ref('')
 const resetBusy = ref(false)
 const managerBusy = ref(false)
 const staffMessage = ref('')
+const transferTargets = computed(() => stores.value.filter((store) => String(store.id) !== currentStoreId.value && store.status !== 'dismissed'))
+const transferSelection = ref<Record<string, string>>({})
 const permissionLabels: Record<StaffPermission, string> = { cashier: 'Kasir', products: 'Produk', cashflow: 'Cashflow', reports: 'Laporan', settings: 'Pengaturan' }
 
 async function onAddStore() {
@@ -248,6 +250,18 @@ async function dismissStaffMember(uid: string) {
   if (!confirm('Bebastugaskan staf ini? Aksesnya ke outlet akan langsung dihentikan.')) return
   managerBusy.value = true
   try { await account.dismissStaff(uid); staffMessage.value = 'Staf dibebastugaskan.' } finally { managerBusy.value = false }
+}
+
+async function transferStaffMember(uid: string) {
+  const target = transferSelection.value[uid]
+  if (!target || managerBusy.value) return
+  managerBusy.value = true
+  try {
+    if (await account.transferStaff(uid, target)) {
+      staffMessage.value = 'Staf berhasil dipindahkan ke outlet tujuan.'
+      delete transferSelection.value[uid]
+    }
+  } finally { managerBusy.value = false }
 }
 
 const syncLabel = computed(() => {
@@ -339,7 +353,8 @@ const syncLabel = computed(() => {
           <div v-for="member in account.staffMembers" :key="member.uid" class="space-y-3 rounded-lg bg-muted/40 p-3">
             <div class="flex items-center gap-2"><div class="min-w-0 flex-1"><p class="truncate font-medium">{{ member.name }}</p><p class="truncate text-xs text-muted-foreground">{{ member.email }}</p></div><Badge :variant="member.status === 'dismissed' ? 'destructive' : 'secondary'">{{ member.status === 'dismissed' ? 'Dibebastugaskan' : member.role }}</Badge></div>
             <div v-if="member.status === 'active'" class="grid grid-cols-2 gap-2 text-xs"><label v-for="permission in STAFF_PERMISSIONS" :key="permission" class="flex items-center gap-2"><input type="checkbox" :checked="member.permissions.includes(permission)" @change="updateStaffPermission(member.uid, permission, ($event.target as HTMLInputElement).checked)" /> {{ permissionLabels[permission] }}</label></div>
-            <div v-if="member.status === 'active'" class="flex gap-2"><Button size="sm" variant="outline" @click="changeStaffRole(member.uid, member.role === 'manager' ? 'staff' : 'manager')">Jadikan {{ member.role === 'manager' ? 'staf' : 'manajer' }}</Button><Button size="sm" variant="ghost" class="text-destructive" @click="dismissStaffMember(member.uid)"><UserX class="size-4" /> Bebastugaskan</Button></div>
+            <div v-if="member.status === 'active'" class="flex flex-wrap gap-2"><Button size="sm" variant="outline" @click="changeStaffRole(member.uid, member.role === 'manager' ? 'staff' : 'manager')">Jadikan {{ member.role === 'manager' ? 'staf' : 'manajer' }}</Button><Button size="sm" variant="ghost" class="text-destructive" @click="dismissStaffMember(member.uid)"><UserX class="size-4" /> Bebastugaskan</Button></div>
+            <div v-if="member.status === 'active' && transferTargets.length" class="flex items-center gap-2"><select v-model="transferSelection[member.uid]" class="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-xs"><option value="">Pindah ke outlet…</option><option v-for="target in transferTargets" :key="String(target.id)" :value="String(target.id)">{{ target.name }}</option></select><Button size="sm" variant="outline" :disabled="!transferSelection[member.uid] || managerBusy" @click="transferStaffMember(member.uid)"><ArrowRightLeft class="size-4" /> Pindah</Button></div>
           </div>
         </section>
         <BottomSheet :open="!!pendingSwitch" title="Ganti outlet?" @update:open="(v: boolean) => { if (!v && !switching) pendingSwitch = null }">

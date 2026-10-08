@@ -2,7 +2,7 @@
 
 **Status:** ✅ Final (Phase 6) · **Base URL:** `https://<host>/api/v1` · **Format:** JSON
 
-Dokumen ini **sumber kebenaran** kontrak antara **FE POS Kacaw** (yang meng-*consume*)
+Dokumen ini **sumber kebenaran** kontrak antara **FE Di Kasirin** (yang meng-*consume*)
 dan **BE POS Pro / Laravel** (yang meng-*implement*). Tipe di sini WAJIB byte-compatible
 dengan `src/services/sync/types.ts` & `src/db/types.ts` di FE. Jangan diubah sepihak —
 perubahan breaking = versi baru (`api/v2`).
@@ -80,7 +80,7 @@ Client (app/web) dapat **ID token** dari Google Sign-In lalu kirim ke server; se
     "current_store_id": "store-uuid"
   },
   "stores": [
-    { "id": "store-uuid", "name": "Toko Kacaw", "role": "owner" }
+    { "id": "store-uuid", "name": "Nama Outlet", "role": "owner" }
   ]
 }
 ```

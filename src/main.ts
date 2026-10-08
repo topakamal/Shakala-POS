@@ -46,7 +46,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  console.error('[POS Kacaw] gagal inisialisasi:', err)
+  console.error('[Di Kasirin] gagal inisialisasi:', err)
   const el = document.getElementById('app')
   if (el) {
     el.innerHTML = `<div style="padding:24px;font-family:sans-serif;color:#b00">
