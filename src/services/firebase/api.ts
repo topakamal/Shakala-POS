@@ -161,6 +161,8 @@ export class FirebaseApiClient {
 
   async createStore(name: string): Promise<{ store: AccountStore; stores: AccountStore[] }> {
     const user = requireUser()
+    const profileDoc = await getDoc(profileRef(user.uid))
+    if (profileDoc.data()?.account_role === 'staff') throw new Error('Akun staf tidak dapat membuat outlet baru.')
     const profile = await this.stores()
     const store: AccountStore = { id: crypto.randomUUID(), name: name.trim(), role: 'owner' }
     await setDoc(storeRef(String(store.id)), { name: store.name, owner_id: user.uid, created_at: Date.now(), staff_signup_enabled: true })
