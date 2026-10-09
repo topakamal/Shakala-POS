@@ -36,7 +36,7 @@ import type { ChangeEnvelope, PullResult, PushResult } from '@/services/sync/typ
 
 interface PosCloudApi {
   loginEmail(email: string, password: string): Promise<AuthPayload>
-  registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff'): Promise<AuthPayload>
+  registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff', outletName?: string): Promise<AuthPayload>
   loginGoogle(idToken: string): Promise<AuthPayload>
   logout(): Promise<void>
   createStore(name: string): Promise<{ store: AccountStore; stores: AccountStore[] }>
@@ -126,7 +126,7 @@ export const useAccountStore = defineStore('account', () => {
   const api: PosCloudApi = useFirebase
     ? {
         loginEmail: (email, password) => firebaseApi.loginEmail(email, password),
-        registerEmail: (name, email, password, role) => firebaseApi.registerEmail(name, email, password, role),
+        registerEmail: (name, email, password, role, outletName) => firebaseApi.registerEmail(name, email, password, role, outletName),
         loginGoogle: async () => {
           throw new Error('Login Google Firebase belum diaktifkan. Gunakan email dan password.')
         },
@@ -224,8 +224,8 @@ export const useAccountStore = defineStore('account', () => {
     return withLogin(() => api.loginEmail(email, password))
   }
 
-  function registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff' = 'owner'): Promise<boolean> {
-    return withLogin(() => api.registerEmail(name, email, password, role))
+  function registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff' = 'owner', outletName?: string): Promise<boolean> {
+    return withLogin(() => api.registerEmail(name, email, password, role, outletName))
   }
 
   async function loadAvailableStores(): Promise<void> {
@@ -405,6 +405,9 @@ export const useAccountStore = defineStore('account', () => {
         await api.resetStore(currentStoreId.value!, password)
         await resetLocalBusinessData()
         useMediaStore().clear()
+        stores.value = []
+        currentStoreId.value = null
+        await repo().setMany({ [KEYS.stores]: '', [KEYS.storeId]: '' })
         return true
       })
     } catch (e) {

@@ -132,8 +132,8 @@ export class ApiClient {
     return this.request('POST', '/auth/login', { email, password })
   }
 
-  registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff' = 'owner'): Promise<AuthPayload> {
-    return this.request('POST', '/auth/register', { name, email, password, role })
+  registerEmail(name: string, email: string, password: string, role: 'owner' | 'staff' = 'owner', outletName?: string): Promise<AuthPayload> {
+    return this.request('POST', '/auth/register', { name, email, password, role, outlet_name: outletName })
   }
 
   me(): Promise<{ user: AccountUser; stores: AccountStore[] }> {

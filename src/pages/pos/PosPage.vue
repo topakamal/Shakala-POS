@@ -311,8 +311,8 @@ async function printReceipt() {
   await printer.print(
     buildReceipt(lastResult.value.sale, lastResult.value.items, {
       storeName: activityOutletName.value,
-      storeOwner: activityActorName.value,
-      actorName: activityActorName.value,
+      storeOwner: account.user?.account_role === 'owner' ? (account.user.name || 'owner') : activityActorName.value,
+      actorName: account.user?.account_role === 'owner' ? (account.user.name || 'owner') : activityActorName.value,
       headerMode: settings.receiptHeader,
       logoDataUrl: media.url(settings.storeLogo),
       headerText: settings.receiptHeaderText,

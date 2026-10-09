@@ -65,10 +65,10 @@ async function tokenOf(user: User): Promise<string> {
   return getIdToken(user, true)
 }
 
-function userShape(user: User, currentStoreId: string | null, accountRole: 'owner' | 'staff' = 'owner', permissions?: StaffPermission[]): AccountUser {
+function userShape(user: User, currentStoreId: string | null, accountRole: 'owner' | 'staff' = 'owner', permissions?: StaffPermission[], profileName?: string): AccountUser {
   return {
     id: user.uid,
-    name: user.displayName || user.email?.split('@')[0] || 'Kasir',
+    name: profileName?.trim() || user.displayName || user.email?.split('@')[0] || 'Kasir',
     email: user.email || '',
     avatar_url: user.photoURL,
     current_store_id: currentStoreId,
@@ -110,7 +110,7 @@ async function payloadFor(user: User): Promise<AuthPayload> {
     const permissions = membership.data()?.permissions
     currentPermissions = Array.isArray(permissions) ? permissions as StaffPermission[] : [...DEFAULT_STAFF_PERMISSIONS]
   }
-  return { token: await tokenOf(user), user: userShape(user, currentStoreId == null ? null : String(currentStoreId), data?.account_role ?? 'owner', currentPermissions), stores }
+  return { token: await tokenOf(user), user: userShape(user, currentStoreId == null ? null : String(currentStoreId), data?.account_role ?? 'owner', currentPermissions, data?.name), stores }
 }
 
 export class FirebaseApiClient {
@@ -119,7 +119,7 @@ export class FirebaseApiClient {
     return payloadFor(credential.user)
   }
 
-  async registerEmail(name: string, email: string, password: string, accountRole: 'owner' | 'staff' = 'owner'): Promise<AuthPayload> {
+  async registerEmail(name: string, email: string, password: string, accountRole: 'owner' | 'staff' = 'owner', outletName = ''): Promise<AuthPayload> {
     const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password)
     if (accountRole === 'staff') {
       await setDoc(profileRef(credential.user.uid), {
@@ -128,7 +128,7 @@ export class FirebaseApiClient {
       return payloadFor(credential.user)
     }
     const storeId = crypto.randomUUID()
-    const store: AccountStore = { id: storeId, name: name.trim() || 'Shakala Bakery', role: 'owner' }
+    const store: AccountStore = { id: storeId, name: outletName.trim() || 'Outlet baru', role: 'owner' }
     await setDoc(storeRef(storeId), {
       name: store.name,
       owner_id: credential.user.uid,
@@ -302,8 +302,10 @@ export class FirebaseApiClient {
     if (user.email?.toLowerCase() !== 'ktopa58@gmail.com') throw new Error('Reset data cloud hanya tersedia untuk akun utama.')
     if (!user.email) throw new Error('Akun ini tidak menggunakan login email dan password.')
     await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
-    await this.deleteStoreChildren(storeId, false)
-    await setDoc(memberRef(storeId, user.uid), { role: 'owner', uid: user.uid })
+    const owned = await getDocs(query(collection(firebaseDb, 'stores'), where('owner_id', '==', user.uid)))
+    const storeIds = Array.from(new Set([storeId, ...owned.docs.map((row) => row.id)]))
+    for (const id of storeIds) await this.deleteStoreChildren(id, true)
+    await updateDoc(profileRef(user.uid), { stores: [], current_store_id: null })
   }
 
   async deleteAccount(password: string): Promise<void> {

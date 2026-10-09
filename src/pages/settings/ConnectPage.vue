@@ -30,6 +30,7 @@ const { status: syncStatus, pending, failedChanges, failedCount, lastError, last
 
 const mode = ref<'login' | 'register'>('login')
 const name = ref('')
+const outletName = ref('')
 const email = ref('')
 const password = ref('')
 const password2 = ref('')
@@ -60,11 +61,15 @@ async function onSubmit() {
       localError.value = 'Nama wajib diisi.'
       return
     }
+    if (accountRole.value === 'owner' && !outletName.value.trim()) {
+      localError.value = 'Nama outlet wajib diisi untuk akun owner.'
+      return
+    }
     if (password.value !== password2.value) {
       localError.value = 'Konfirmasi kata sandi tidak cocok.'
       return
     }
-    ok = await account.registerEmail(name.value.trim(), email.value.trim(), password.value, accountRole.value)
+    ok = await account.registerEmail(name.value.trim(), email.value.trim(), password.value, accountRole.value, outletName.value.trim())
   } else {
     ok = await account.loginEmail(email.value.trim(), password.value)
   }
@@ -311,9 +316,11 @@ const syncLabel = computed(() => {
       <ConnectAuthCard
         v-if="!isAuthenticated"
         :mode="mode" :name="name" :email="email" :password="password" :password2="password2"
+        :outlet-name="outletName"
         :loading="status === 'loading'" :status="status" :local-error="localError" :account-role="accountRole"
         :account-error="error" :has-google="hasGoogle"
         @update:mode="switchMode" @update:name="name = $event" @update:email="email = $event"
+        @update:outlet-name="outletName = $event"
         @update:password="password = $event" @update:password2="password2 = $event"
         @update:account-role="accountRole = $event"
         @submit="onSubmit" @google-login="onGoogleLogin"

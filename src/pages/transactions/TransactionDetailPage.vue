@@ -54,8 +54,8 @@ async function printReceipt() {
   await printer.print(
     buildReceipt(sale.value, items.value, {
       storeName: sale.value.outlet_name ?? account.currentStore?.name ?? settings.storeName,
-      storeOwner: sale.value.actor_name ?? (account.user?.account_role === 'staff' ? account.user.name : 'owner'),
-      actorName: sale.value.actor_name ?? (account.user?.account_role === 'staff' ? account.user.name : 'owner'),
+      storeOwner: sale.value.actor_name === 'owner' ? (account.user?.name || 'owner') : (sale.value.actor_name ?? (account.user?.account_role === 'staff' ? account.user.name : 'owner')),
+      actorName: sale.value.actor_name === 'owner' ? (account.user?.name || 'owner') : (sale.value.actor_name ?? (account.user?.account_role === 'staff' ? account.user.name : 'owner')),
       headerMode: settings.receiptHeader,
       logoDataUrl: media.url(settings.storeLogo),
       headerText: settings.receiptHeaderText,

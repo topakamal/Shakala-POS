@@ -10,6 +10,7 @@ type AuthMode = 'login' | 'register'
 defineProps<{
   readonly mode: AuthMode
   readonly name: string
+  readonly outletName: string
   readonly email: string
   readonly password: string
   readonly password2: string
@@ -24,6 +25,7 @@ defineProps<{
 const emit = defineEmits<{
   'update:mode': [value: AuthMode]
   'update:name': [value: string]
+  'update:outletName': [value: string]
   'update:email': [value: string]
   'update:password': [value: string]
   'update:password2': [value: string]
@@ -44,6 +46,11 @@ const emit = defineEmits<{
       <div v-if="mode === 'register'" class="space-y-2">
         <Label for="name">Nama</Label>
         <Input id="name" :model-value="name" placeholder="Nama kamu / toko" @update:model-value="emit('update:name', String($event))" />
+      </div>
+      <div v-if="mode === 'register' && accountRole === 'owner'" class="space-y-2">
+        <Label for="outlet-name">Nama outlet</Label>
+        <Input id="outlet-name" :model-value="outletName" placeholder="Nama outlet kamu" @update:model-value="emit('update:outletName', String($event))" />
+        <p class="text-xs text-muted-foreground">Nama ini tampil sebagai identitas outlet dan pada struk.</p>
       </div>
       <div v-if="mode === 'register'" class="space-y-2">
         <Label>Jenis akun</Label>

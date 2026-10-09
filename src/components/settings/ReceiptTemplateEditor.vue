@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore } from '@/stores/settings'
+import { useAccountStore } from '@/stores/account'
 import { useMediaStore } from '@/stores/media'
 import { encodeQrToDataUrl } from '@/lib/qris'
 import { downscale, pickImage } from '@/lib/image'
@@ -18,6 +19,7 @@ import { Label } from '@/components/ui/label'
 import { ArrowDown, ArrowUp, Check, Image, Plus, Redo2, Save, Trash2, Undo2 } from 'lucide-vue-next'
 
 const settings = useSettingsStore()
+const account = useAccountStore()
 const media = useMediaStore()
 const { storeName, storeLogo, qrisPayload, receiptTemplate } = storeToRefs(settings)
 const elements = ref<ReceiptElement[]>([])
@@ -31,6 +33,7 @@ const saved = ref(false)
 const qrPreview = ref<string | null>(null)
 const barcodePreview = ref<string | null>(null)
 const imageUrl = computed(() => media.url(storeLogo.value))
+const actorPreview = computed(() => account.user?.name || 'Nama kasir / owner')
 const selectedIndex = computed(() => elements.value.findIndex((item) => item.id === selectedId.value))
 const selected = computed(() => elements.value.find((item) => item.id === selectedId.value) ?? null)
 
@@ -138,7 +141,7 @@ function previewLabel(element: ReceiptElement): string {
   switch (element.type) {
     case 'logo': return 'Logo toko'
     case 'store': return storeName.value
-    case 'actor': return 'Nama kasir / owner'
+    case 'actor': return actorPreview.value
     case 'datetime': return '05 Okt 2026, 21.30'
     case 'separator': return '────────────────────'
     case 'invoice': return 'No : POS-20261005-001'
