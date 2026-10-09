@@ -1,4 +1,4 @@
-package com.karuhundeveloper.poskacaw;
+package com.dikasirin.aja;
 
 import android.content.Context;
 import android.content.SharedPreferences;

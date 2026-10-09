@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.karuhundeveloper.poskacaw',
+  appId: 'com.dikasirin.aja',
   appName: 'Di Kasirin',
   webDir: 'dist',
   plugins: {

@@ -1,4 +1,4 @@
-package com.karuhundeveloper.poskacaw;
+package com.dikasirin.aja;
 
 import android.os.Bundle;
 import android.view.WindowManager;

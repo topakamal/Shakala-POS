@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.karuhundeveloper.poskacaw"
+    namespace = "com.dikasirin.aja"
     compileSdk = rootProject.ext.compileSdkVersion
 
     // Versi di-inject dari tag Release lewat CI (-PappVersionCode/-PappVersionName).
@@ -12,7 +12,7 @@ android {
     def appVersionName = (project.findProperty('appVersionName') ?: '1.0').toString()
 
     defaultConfig {
-        applicationId "com.karuhundeveloper.poskacaw"
+        applicationId "com.dikasirin.aja"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode

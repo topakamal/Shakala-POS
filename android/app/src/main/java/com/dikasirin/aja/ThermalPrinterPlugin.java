@@ -1,4 +1,4 @@
-package com.karuhundeveloper.poskacaw;
+package com.dikasirin.aja;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -54,7 +54,7 @@ import java.util.UUID;
 public class ThermalPrinterPlugin extends Plugin {
     /** UUID standar Serial Port Profile — dipakai hampir semua printer BT thermal. */
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private static final String ACTION_USB_PERMISSION = "com.karuhundeveloper.poskacaw.USB_PERMISSION";
+    private static final String ACTION_USB_PERMISSION = "com.dikasirin.aja.USB_PERMISSION";
 
     // ---------------------------------------------------------------- Bluetooth
 

@@ -5,6 +5,7 @@ import {
   getIdToken,
   reauthenticateWithCredential,
   signInWithEmailAndPassword,
+  sendEmailVerification,
   signOut,
   updatePassword,
   type User,
@@ -46,6 +47,11 @@ const SYNC_ENTITIES = [
   'categories', 'products', 'media', 'cashier_sessions', 'sales', 'sale_items',
   'cashflow_categories', 'cashflow_entries',
 ] as const
+
+const EMAIL_VERIFICATION_SETTINGS = {
+  url: 'https://shakala-pos.firebaseapp.com',
+  handleCodeInApp: false,
+} as const
 
 interface ProfileData {
   name: string
@@ -125,6 +131,7 @@ export class FirebaseApiClient {
       await setDoc(profileRef(credential.user.uid), {
         name: name.trim() || 'Staf', email, account_role: 'staff', stores: [], current_store_id: null,
       })
+      await sendEmailVerification(credential.user, EMAIL_VERIFICATION_SETTINGS)
       return payloadFor(credential.user)
     }
     const storeId = crypto.randomUUID()
@@ -142,6 +149,7 @@ export class FirebaseApiClient {
       current_store_id: storeId,
       account_role: 'owner',
     })
+    await sendEmailVerification(credential.user, EMAIL_VERIFICATION_SETTINGS)
     return payloadFor(credential.user)
   }
 

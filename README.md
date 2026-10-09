@@ -9,7 +9,7 @@ tanpa langganan.
 **[⬇ Unduh APK terbaru](https://github.com/karuhun-developer/pos-android/releases/latest)**
 · [Panel web POS Pro](https://github.com/karuhun-developer/pos-web)
 
-- **App id:** `com.karuhundeveloper.poskacaw`
+- **App id:** `com.dikasirin.aja`
 - **Backend (opsional):** [POS Pro](https://github.com/karuhun-developer/pos-web) — Laravel + Sanctum
 - **Status:** Phase 0–7 selesai (offline penuh + sync + build Android jalan).
   Printer thermal (ESC/POS via Bluetooth SPP & USB) sudah jalan di Android —
