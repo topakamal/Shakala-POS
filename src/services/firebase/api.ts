@@ -122,6 +122,11 @@ async function payloadFor(user: User): Promise<AuthPayload> {
 export class FirebaseApiClient {
   async loginEmail(email: string, password: string): Promise<AuthPayload> {
     const credential = await signInWithEmailAndPassword(firebaseAuth, email, password)
+    if (!credential.user.emailVerified) {
+      await sendEmailVerification(credential.user, EMAIL_VERIFICATION_SETTINGS)
+      await signOut(firebaseAuth)
+      throw new Error('Email belum terverifikasi. Tautan verifikasi baru telah dikirim, termasuk kemungkinan masuk folder spam.')
+    }
     return payloadFor(credential.user)
   }
 
@@ -132,7 +137,8 @@ export class FirebaseApiClient {
         name: name.trim() || 'Staf', email, account_role: 'staff', stores: [], current_store_id: null,
       })
       await sendEmailVerification(credential.user, EMAIL_VERIFICATION_SETTINGS)
-      return payloadFor(credential.user)
+      await signOut(firebaseAuth)
+      throw new Error('Pendaftaran berhasil. Silakan klik tautan verifikasi di email sebelum masuk.')
     }
     const storeId = crypto.randomUUID()
     const store: AccountStore = { id: storeId, name: outletName.trim() || 'Outlet baru', role: 'owner' }
@@ -150,7 +156,8 @@ export class FirebaseApiClient {
       account_role: 'owner',
     })
     await sendEmailVerification(credential.user, EMAIL_VERIFICATION_SETTINGS)
-    return payloadFor(credential.user)
+    await signOut(firebaseAuth)
+    throw new Error('Pendaftaran berhasil. Silakan klik tautan verifikasi di email sebelum masuk.')
   }
 
   async me(): Promise<{ user: AccountUser; stores: AccountStore[] }> {
