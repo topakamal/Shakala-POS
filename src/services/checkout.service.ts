@@ -52,6 +52,8 @@ export class CheckoutService {
       const stock = await validateSaleStock(tx, input.lines)
       const sales = new SaleRepository(tx)
       const sale = await sales.create({
+        outlet_name: input.outletName ?? null,
+        actor_name: input.actorName ?? null,
         session_id: input.sessionId ?? null,
         number: await sales.nextNumber(input.devicePrefix, occurredAt),
         subtotal: amounts.subtotal,

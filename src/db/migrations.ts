@@ -250,6 +250,18 @@ const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: 6,
+    name: 'activity-origin-labels',
+    up: async (db) => {
+      await db.execute(`
+        ALTER TABLE sales ADD COLUMN outlet_name TEXT;
+        ALTER TABLE sales ADD COLUMN actor_name TEXT;
+        ALTER TABLE cashflow_entries ADD COLUMN outlet_name TEXT;
+        ALTER TABLE cashflow_entries ADD COLUMN actor_name TEXT;
+      `)
+    },
+  },
   protectLegacyCashflowDefaults,
   stableCashflowCategoryIds,
 ]

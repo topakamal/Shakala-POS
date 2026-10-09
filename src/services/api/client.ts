@@ -168,6 +168,10 @@ export class ApiClient {
     return this.request('POST', `/stores/${storeId}/reset`, { password })
   }
 
+  deleteAccount(password: string): Promise<void> {
+    return this.request('DELETE', '/auth/account', { password })
+  }
+
   availableStores(): Promise<{ stores: PublicStore[] }> {
     return this.request('GET', '/stores/available-for-staff')
   }

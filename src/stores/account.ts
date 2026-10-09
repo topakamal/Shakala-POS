@@ -44,6 +44,7 @@ interface PosCloudApi {
   changePassword(currentPassword: string, nextPassword: string): Promise<void>
   deleteStore(id: string | number): Promise<{ stores: AccountStore[]; currentStoreId: string | null }>
   resetStore(storeId: string, password: string): Promise<void>
+  deleteAccount(password: string): Promise<void>
   availableStores(): Promise<{ stores: PublicStore[] }>
   joinStore(storeId: string): Promise<AuthPayload>
   staff(storeId: string): Promise<{ staff: StaffMember[] }>
@@ -135,6 +136,7 @@ export const useAccountStore = defineStore('account', () => {
         changePassword: (current, next) => firebaseApi.changePassword(current, next),
         deleteStore: (id) => firebaseApi.deleteStore(id),
         resetStore: (storeId, password) => firebaseApi.resetStore(storeId, password),
+        deleteAccount: (password) => firebaseApi.deleteAccount(password),
         availableStores: () => firebaseApi.availableStores(),
         joinStore: (storeId) => firebaseApi.joinStore(storeId),
         staff: (storeId) => firebaseApi.staff(storeId),
@@ -394,6 +396,10 @@ export const useAccountStore = defineStore('account', () => {
       error.value = 'Belum ada outlet aktif.'
       return false
     }
+    if (user.value?.email?.toLowerCase() !== 'ktopa58@gmail.com') {
+      error.value = 'Reset data cloud hanya tersedia untuk akun utama.'
+      return false
+    }
     try {
       return await SyncEngine.duringOutletTransition(async () => {
         await api.resetStore(currentStoreId.value!, password)
@@ -401,6 +407,20 @@ export const useAccountStore = defineStore('account', () => {
         useMediaStore().clear()
         return true
       })
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      return false
+    }
+  }
+
+  async function deleteAccount(password: string): Promise<boolean> {
+    error.value = null
+    try {
+      await api.deleteAccount(password)
+      await clearSession()
+      await resetLocalBusinessData()
+      useMediaStore().clear()
+      return true
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
       return false
@@ -481,6 +501,7 @@ export const useAccountStore = defineStore('account', () => {
     changePassword,
     deleteStore,
     resetCloudData,
+    deleteAccount,
     logout,
   }
 })

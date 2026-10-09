@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-vue-next'
 import { useCashflowStore } from '@/stores/cashflow'
+import { useAccountStore } from '@/stores/account'
+import { useSettingsStore } from '@/stores/settings'
 import { useCashierStore } from '@/stores/cashier'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +17,8 @@ const route = useRoute()
 const router = useRouter()
 const cashflow = useCashflowStore()
 const cashier = useCashierStore()
+const account = useAccountStore()
+const settings = useSettingsStore()
 
 const id = computed(() => route.params.id as string | undefined)
 const isEdit = computed(() => !!id.value)
@@ -69,6 +73,8 @@ async function save() {
         amount: amount.value,
         note: note.value,
         sessionId: cashier.current?.id ?? null,
+        outletName: account.currentStore?.name ?? settings.storeName,
+        actorName: account.user?.account_role === 'staff' ? account.user.name : 'owner',
       })
     }
     router.back()

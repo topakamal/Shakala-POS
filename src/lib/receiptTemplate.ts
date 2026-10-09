@@ -1,6 +1,7 @@
 export type ReceiptElementType =
   | 'logo'
   | 'store'
+  | 'actor'
   | 'text'
   | 'datetime'
   | 'separator'
@@ -23,6 +24,7 @@ export interface ReceiptElement {
 export const RECEIPT_ELEMENT_LABELS: Record<ReceiptElementType, string> = {
   logo: 'Gambar / Logo',
   store: 'Nama dan info toko',
+  actor: 'Nama kasir / owner',
   text: 'Teks',
   datetime: 'Tanggal & waktu',
   separator: 'Pemisah',
@@ -35,7 +37,7 @@ export const RECEIPT_ELEMENT_LABELS: Record<ReceiptElementType, string> = {
 
 export function newReceiptElement(type: ReceiptElementType): ReceiptElement {
   const names: Record<ReceiptElementType, string> = {
-    logo: '', store: '', text: 'Teks toko', datetime: '', separator: '',
+    logo: '', store: '', actor: '', text: 'Teks toko', datetime: '', separator: '',
     invoice: '', items: '', summary: '', qrcode: '', barcode: '',
   }
   return {
@@ -49,11 +51,11 @@ export function newReceiptElement(type: ReceiptElementType): ReceiptElement {
 }
 
 export function defaultReceiptTemplate(): ReceiptElement[] {
-  return (['logo', 'store', 'text', 'separator', 'invoice', 'datetime', 'separator', 'items', 'separator', 'summary', 'qrcode', 'text'] as ReceiptElementType[])
+  return (['logo', 'store', 'actor', 'text', 'separator', 'invoice', 'datetime', 'separator', 'items', 'separator', 'summary', 'qrcode', 'text'] as ReceiptElementType[])
     .map((type) => newReceiptElement(type))
-    .map((element, index) => index === 2
-    ? { ...element, text: '', align: 'center' as const }
-      : index === 11
+    .map((element, index) => index === 3
+      ? { ...element, text: '', align: 'center' as const }
+      : index === 12
         ? { ...element, text: 'Terima kasih 🙏', align: 'center' as const }
         : element)
 }

@@ -56,7 +56,7 @@ export const useSyncStore = defineStore('sync', () => {
   const engine = new SyncEngine(
     account.api,
     () => account.isAuthenticated && !!account.currentStoreId,
-    30_000,
+    10_000,
     async () => {
       try {
         await refreshAfterCycle()

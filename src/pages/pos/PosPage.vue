@@ -23,6 +23,7 @@ import { useSalesStore } from '@/stores/sales'
 import { useSettingsStore } from '@/stores/settings'
 import { useCashierStore } from '@/stores/cashier'
 import { usePrinterStore } from '@/stores/printer'
+import { useAccountStore } from '@/stores/account'
 import { capabilities } from '@/services/capabilities/registry'
 import type { PrinterCapability } from '@/services/capabilities/registry'
 import { CheckoutError, type CheckoutResult } from '@/services/checkout.service'
@@ -42,6 +43,7 @@ const cart = useCartStore()
 const sales = useSalesStore()
 const settings = useSettingsStore()
 const cashier = useCashierStore()
+const account = useAccountStore()
 const { filtered, query, categoryFilter } = storeToRefs(products)
 const { openBills } = storeToRefs(sales)
 
@@ -59,6 +61,9 @@ const holdLabel = ref('')
 const selectedDiscardBill = ref<Sale | null>(null)
 const openBillBusyId = ref<string | null>(null)
 const operationError = ref<string | null>(null)
+
+const activityOutletName = computed(() => account.isAuthenticated ? (account.currentStore?.name ?? settings.storeName) : settings.storeName)
+const activityActorName = computed(() => account.isAuthenticated && account.user?.account_role === 'staff' ? account.user.name : 'owner')
 
 watch([settings.taxEnabled, settings.taxPercent], () => {
   cart.setTaxPercent(settings.taxEnabled ? settings.taxPercent : 0)
@@ -128,6 +133,8 @@ async function submitHold() {
         discount: cart.discount,
         taxPercent: settings.taxEnabled ? settings.taxPercent : 0,
         label,
+        outletName: activityOutletName.value,
+        actorName: activityActorName.value,
       })
     } else {
       await sales.hold({
@@ -137,6 +144,8 @@ async function submitHold() {
         devicePrefix: settings.devicePrefix || 'POS',
         deviceId: settings.deviceId,
         label,
+        outletName: activityOutletName.value,
+        actorName: activityActorName.value,
       })
     }
     cart.clear()
@@ -264,10 +273,14 @@ async function pay({ paid, paymentMethod }: { paid: number; paymentMethod: strin
           ...payment,
           saleId: activeOpenBillId,
           deviceId: settings.deviceId,
+          outletName: activityOutletName.value,
+          actorName: activityActorName.value,
         })
       : await sales.checkout({
           ...payment,
           devicePrefix: settings.devicePrefix || 'POS',
+          outletName: activityOutletName.value,
+          actorName: activityActorName.value,
         })
     lastResult.value = res
     showPayment.value = false
@@ -297,8 +310,9 @@ async function printReceipt() {
     .map((element) => [element.imageRef!, media.url(element.imageRef)]))
   await printer.print(
     buildReceipt(lastResult.value.sale, lastResult.value.items, {
-      storeName: settings.storeName,
-      storeOwner: settings.storeOwner,
+      storeName: activityOutletName.value,
+      storeOwner: activityActorName.value,
+      actorName: activityActorName.value,
       headerMode: settings.receiptHeader,
       logoDataUrl: media.url(settings.storeLogo),
       headerText: settings.receiptHeaderText,

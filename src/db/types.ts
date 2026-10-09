@@ -79,6 +79,8 @@ export interface CashierSession extends SyncEntity {
 }
 
 export interface Sale extends SyncEntity {
+  outlet_name: string | null
+  actor_name: string | null
   session_id: string | null
   number: string
   subtotal: number
@@ -113,6 +115,8 @@ export interface CashflowCategory extends SyncEntity {
 }
 
 export interface CashflowEntry extends SyncEntity {
+  outlet_name: string | null
+  actor_name: string | null
   category_id: string | null
   session_id: string | null
   direction: 'debit' | 'credit' // debit = uang masuk, credit = uang keluar

@@ -158,6 +158,10 @@ const resetOpen = ref(false)
 const resetPassword = ref('')
 const resetConfirm = ref('')
 const resetBusy = ref(false)
+const deleteAccountOpen = ref(false)
+const deleteAccountPassword = ref('')
+const deleteAccountConfirm = ref('')
+const deleteAccountBusy = ref(false)
 const managerBusy = ref(false)
 const staffMessage = ref('')
 const transferTargets = computed(() => stores.value.filter((store) => String(store.id) !== currentStoreId.value && store.status !== 'dismissed'))
@@ -228,9 +232,26 @@ async function confirmResetCloud() {
   } finally { resetBusy.value = false }
 }
 
+async function confirmDeleteAccount() {
+  if (deleteAccountConfirm.value !== 'HAPUS AKUN' || !deleteAccountPassword.value || deleteAccountBusy.value) return
+  deleteAccountBusy.value = true
+  try {
+    if (await account.deleteAccount(deleteAccountPassword.value)) {
+      deleteAccountOpen.value = false
+      deleteAccountPassword.value = ''
+      deleteAccountConfirm.value = ''
+      await sync.stop()
+    }
+  } finally { deleteAccountBusy.value = false }
+}
+
 async function chooseStaffStore(id: string) {
-  if (!await account.joinStore(id)) return
-  await sync.start(); await sync.syncNow()
+  if (switching.value) return
+  switching.value = true
+  try {
+    if (!await account.joinStore(id)) return
+    await sync.start(); await sync.syncNow()
+  } finally { switching.value = false }
 }
 
 async function updateStaffPermission(uid: string, permission: StaffPermission, enabled: boolean) {
@@ -308,7 +329,8 @@ const syncLabel = computed(() => {
         <Card v-if="user?.account_role === 'staff' && !currentStoreId" class="border-primary/30">
           <CardContent class="space-y-3 p-4">
             <div><p class="font-semibold">Pilih outlet untuk mulai bekerja</p><p class="text-xs text-muted-foreground">Daftar outlet diambil dari cloud.</p></div>
-            <Button v-for="store in account.availableStoreOptions" :key="store.id" variant="outline" class="w-full justify-between" @click="chooseStaffStore(store.id)"><span>{{ store.name }}</span><UserRound class="size-4" /></Button>
+            <Button v-for="store in account.availableStoreOptions" :key="store.id" variant="outline" class="w-full justify-between" :disabled="switching" @click="chooseStaffStore(store.id)"><span>{{ store.name }}</span><Loader2 v-if="switching" class="size-4 animate-spin" /><UserRound v-else class="size-4" /></Button>
+            <div v-if="switching" class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"><div class="rounded-2xl border bg-card p-6 text-center shadow-lg"><Loader2 class="mx-auto size-8 animate-spin text-primary" /><p class="mt-3 text-sm font-medium">Menyiapkan outlet…</p><p class="mt-1 text-xs text-muted-foreground">Mengambil data dari cloud</p></div></div>
             <p v-if="!account.availableStoreOptions.length" class="text-sm text-muted-foreground">Belum ada outlet yang membuka pendaftaran staf.</p>
           </CardContent>
         </Card>
@@ -318,7 +340,7 @@ const syncLabel = computed(() => {
         <section v-if="stores.length" class="space-y-2">
           <div class="flex items-center justify-between">
             <Label>Outlet</Label>
-            <Button variant="ghost" size="sm" class="h-7 gap-1 text-primary" @click="showAddStore = !showAddStore"><Plus class="size-4" /> Tambah</Button>
+            <Button v-if="user?.account_role === 'owner'" variant="ghost" size="sm" class="h-7 gap-1 text-primary" @click="showAddStore = !showAddStore"><Plus class="size-4" /> Tambah</Button>
           </div>
           <div v-if="showAddStore" class="flex items-center gap-2">
             <Input v-model="newStoreName" placeholder="Nama outlet baru" @keyup.enter="onAddStore" />
@@ -381,7 +403,8 @@ const syncLabel = computed(() => {
             <p v-if="passwordMessage" class="text-xs" :class="passwordMessage.includes('berhasil') ? 'text-success' : 'text-destructive'">{{ passwordMessage }}</p>
             <Button class="w-full" :disabled="passwordBusy" @click="onChangePassword"><Loader2 v-if="passwordBusy" class="size-4 animate-spin" /> Simpan password</Button>
           </div>
-          <Button variant="outline" class="w-full justify-start text-destructive" @click="resetOpen = true"><RotateCcw class="size-4" /> Reset semua data cloud</Button>
+          <Button v-if="user?.email?.toLowerCase() === 'ktopa58@gmail.com'" variant="outline" class="w-full justify-start text-destructive" @click="resetOpen = true"><RotateCcw class="size-4" /> Reset semua data cloud</Button>
+          <Button variant="outline" class="w-full justify-start text-destructive" @click="deleteAccountOpen = true"><UserX class="size-4" /> Hapus akun</Button>
         </section>
         <Button variant="outline" class="w-full text-destructive" @click="onLogout"><LogOut class="size-4" /> Keluar</Button>
       </template>
@@ -408,6 +431,22 @@ const syncLabel = computed(() => {
         <Input v-model="resetPassword" type="password" placeholder="Password untuk verifikasi" autocomplete="current-password" />
         <p v-if="account.error" class="text-xs text-destructive">{{ account.error }}</p>
         <div class="flex gap-2"><Button variant="outline" class="flex-1" :disabled="resetBusy" @click="resetOpen = false">Batal</Button><Button variant="destructive" class="flex-1" :disabled="resetBusy || resetConfirm !== 'RESET' || !resetPassword" @click="confirmResetCloud"><Loader2 v-if="resetBusy" class="size-4 animate-spin" /> Reset permanen</Button></div>
+      </div>
+    </BottomSheet>
+
+    <BottomSheet :open="deleteAccountOpen" title="Hapus akun" @update:open="(v: boolean) => { if (!v && !deleteAccountBusy) deleteAccountOpen = false }">
+      <div class="space-y-4 p-5">
+        <div class="space-y-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          <p class="font-semibold text-destructive">Peringatan penting</p>
+          <p>Akun akan dinonaktifkan dan tidak dapat digunakan untuk login lagi.</p>
+          <p>Riwayat transaksi, cashflow, dan aktivitas tetap disimpan sebagai jejak audit.</p>
+        </div>
+        <Label>Ketik <strong>HAPUS AKUN</strong> untuk konfirmasi</Label>
+        <Input v-model="deleteAccountConfirm" placeholder="HAPUS AKUN" autocomplete="off" />
+        <Label>Password akun online</Label>
+        <Input v-model="deleteAccountPassword" type="password" placeholder="Password untuk verifikasi" autocomplete="current-password" />
+        <p v-if="account.error" class="text-xs text-destructive">{{ account.error }}</p>
+        <div class="flex gap-2"><Button variant="outline" class="flex-1" :disabled="deleteAccountBusy" @click="deleteAccountOpen = false">Batal</Button><Button variant="destructive" class="flex-1" :disabled="deleteAccountBusy || deleteAccountConfirm !== 'HAPUS AKUN' || !deleteAccountPassword" @click="confirmDeleteAccount"><Loader2 v-if="deleteAccountBusy" class="size-4 animate-spin" /> Hapus akun</Button></div>
       </div>
     </BottomSheet>
   </div>

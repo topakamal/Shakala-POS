@@ -8,6 +8,8 @@ export interface CheckoutLine {
 }
 
 export interface PaymentInput {
+  readonly outletName?: string | null
+  readonly actorName?: string | null
   readonly lines: readonly CheckoutLine[]
   readonly paid: number
   readonly paymentMethod: string
@@ -31,6 +33,8 @@ export interface OpenBillLabelInput {
 }
 
 export interface HoldOpenBillInput extends OpenBillLabelInput {
+  readonly outletName?: string | null
+  readonly actorName?: string | null
   readonly lines: readonly CheckoutLine[]
   readonly discount?: number
   readonly devicePrefix: string
@@ -39,6 +43,8 @@ export interface HoldOpenBillInput extends OpenBillLabelInput {
 }
 
 export interface ReholdOpenBillInput extends OpenBillAccessInput, OpenBillLabelInput {
+  readonly outletName?: string | null
+  readonly actorName?: string | null
   readonly lines: readonly CheckoutLine[]
   readonly discount?: number
   readonly taxPercent?: number

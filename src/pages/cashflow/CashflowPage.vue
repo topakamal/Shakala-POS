@@ -8,16 +8,18 @@ import DateRangeFilter from '@/components/common/DateRangeFilter.vue'
 import ExportDialog from '@/components/common/ExportDialog.vue'
 import { Button } from '@/components/ui/button'
 import {
-  Wallet, Plus, Tag, ArrowDownLeft, ArrowUpRight, Lock, Download,
+  Wallet, Plus, Tag, ArrowDownLeft, ArrowUpRight, Lock, Download, RefreshCw,
 } from 'lucide-vue-next'
 import { useCashflowStore } from '@/stores/cashflow'
 import { formatRupiah } from '@/lib/money'
 import { formatTime, formatDate, dayKey } from '@/lib/datetime'
 import { rangeLabel } from '@/lib/dateRange'
 import type { CashflowEntry } from '@/db/types'
+import { useSyncStore } from '@/stores/sync'
 
 const router = useRouter()
 const cashflow = useCashflowStore()
+const sync = useSyncStore()
 const { entries, summary, byCategory, range } = storeToRefs(cashflow)
 
 const label = computed(() => rangeLabel(range.value))
@@ -40,7 +42,15 @@ const groups = computed(() => {
   }))
 })
 
-onMounted(() => cashflow.load())
+onMounted(async () => {
+  await sync.syncNow()
+  await cashflow.load()
+})
+
+async function refreshData() {
+  await sync.syncNow()
+  await cashflow.load()
+}
 
 function openEntry(e: CashflowEntry) {
   if (e.source !== 'manual') return // entri dari penjualan terkunci
@@ -58,6 +68,9 @@ function openEntry(e: CashflowEntry) {
           @click="exportOpen = true"
         >
           <Download class="size-5" />
+        </button>
+        <button class="flex size-9 items-center justify-center rounded-full text-foreground hover:bg-accent" aria-label="Refresh cashflow" :disabled="sync.status === 'syncing'" @click="refreshData">
+          <RefreshCw class="size-5" :class="sync.status === 'syncing' && 'animate-spin'" />
         </button>
         <RouterLink to="/cashflow/categories">
           <Button variant="outline" size="sm" class="gap-1.5" title="Kelola kategori">
@@ -148,6 +161,7 @@ function openEntry(e: CashflowEntry) {
               <p class="truncate text-sm font-medium">{{ cashflow.categoryName(e.category_id) }}</p>
               <div class="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span>{{ formatTime(e.occurred_at) }}</span>
+                <span v-if="e.outlet_name">· {{ e.outlet_name }}</span>
                 <template v-if="e.note"><span>·</span><span class="truncate">{{ e.note }}</span></template>
                 <Lock v-if="e.source !== 'manual'" class="size-3" />
               </div>

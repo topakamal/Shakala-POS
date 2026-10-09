@@ -8,6 +8,7 @@ import type { ReceiptElement } from '@/lib/receiptTemplate'
 export interface ReceiptOpts {
   storeName: string
   storeOwner?: string
+  actorName?: string
   headerMode?: ReceiptHeaderMode
   logoDataUrl?: string | null
   headerText?: string
@@ -85,7 +86,9 @@ export function buildReceipt(
           break
         case 'store':
           lines.push({ text: opts.storeName, align: element.align, bold: element.bold, size: element.size })
-          if (opts.storeOwner) lines.push({ text: opts.storeOwner, align: element.align })
+          break
+        case 'actor':
+          if (opts.actorName) lines.push({ text: opts.actorName, align: element.align, bold: element.bold, size: element.size })
           break
         case 'text':
           if (element.text.trim()) lines.push({ text: element.text, align: element.align, bold: element.bold, size: element.size })
@@ -132,7 +135,7 @@ export function buildReceipt(
   const hasLogo = !!opts.logoDataUrl
   if (mode !== 'logo' || !hasLogo) {
     lines.push({ text: opts.storeName, align: 'center', bold: true, size: 'large' })
-    if (opts.storeOwner) lines.push({ text: opts.storeOwner, align: 'center' })
+    if (opts.actorName ?? opts.storeOwner) lines.push({ text: opts.actorName ?? opts.storeOwner!, align: 'center' })
   }
   if (opts.headerText?.trim()) {
     for (const line of opts.headerText.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)) {

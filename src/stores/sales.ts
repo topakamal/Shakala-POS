@@ -104,6 +104,8 @@ export const useSalesStore = defineStore('sales', () => {
     const txRows = sales.map((s) => ({
       Tanggal: formatDateTime(s.sold_at),
       'No Struk': s.number,
+      Outlet: s.outlet_name ?? 'owner',
+      'Kasir / akun': s.actor_name ?? 'owner',
       Metode: s.payment_method,
       Status: s.status === 'completed' ? 'Selesai' : 'Void',
       Subtotal: s.subtotal,

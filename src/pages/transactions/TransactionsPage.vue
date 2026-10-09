@@ -7,14 +7,16 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import DateRangeFilter from '@/components/common/DateRangeFilter.vue'
 import ExportDialog from '@/components/common/ExportDialog.vue'
 import { Badge } from '@/components/ui/badge'
-import { Receipt, ChevronRight, Download } from 'lucide-vue-next'
+import { Receipt, ChevronRight, Download, RefreshCw } from 'lucide-vue-next'
 import { useSalesStore } from '@/stores/sales'
 import { formatRupiah } from '@/lib/money'
 import { formatTime, formatDate, dayKey } from '@/lib/datetime'
 import { rangeLabel } from '@/lib/dateRange'
 import type { Sale } from '@/db/types'
+import { useSyncStore } from '@/stores/sync'
 
 const sales = useSalesStore()
+const sync = useSyncStore()
 const { recent, openBills, summary, range } = storeToRefs(sales)
 
 const label = computed(() => rangeLabel(range.value))
@@ -51,7 +53,15 @@ const groups = computed(() => {
   }))
 })
 
-onMounted(() => sales.load())
+onMounted(async () => {
+  await sync.syncNow()
+  await sales.load()
+})
+
+async function refreshData() {
+  await sync.syncNow()
+  await sales.load()
+}
 </script>
 
 <template>
@@ -64,6 +74,9 @@ onMounted(() => sales.load())
           @click="exportOpen = true"
         >
           <Download class="size-5" />
+        </button>
+        <button class="flex size-9 items-center justify-center rounded-full text-foreground hover:bg-accent" aria-label="Refresh transaksi" :disabled="sync.status === 'syncing'" @click="refreshData">
+          <RefreshCw class="size-5" :class="sync.status === 'syncing' && 'animate-spin'" />
         </button>
       </template>
     </AppHeader>
@@ -103,6 +116,7 @@ onMounted(() => sales.load())
               </p>
               <div class="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{{ formatTime(activityTime(s)) }}</span>
+                <span v-if="s.outlet_name">· {{ s.outlet_name }}</span>
                 <span>·</span>
                 <span v-if="s.status === 'open'">Ditahan · {{ s.number }}</span>
                 <span v-else>{{ PAY_LABEL[s.payment_method] ?? s.payment_method }}</span>

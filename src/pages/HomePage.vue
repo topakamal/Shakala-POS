@@ -40,8 +40,8 @@ const menu = [
   { to: '/settings', label: 'Akun & Setelan', desc: 'Login, PIN, toko', icon: UserCog },
 ]
 
-const headerName = computed(() => account.isAuthenticated && account.currentStore ? account.currentStore.name : storeName.value)
-const headerOwner = computed(() => account.isAuthenticated ? (account.user?.name || storeOwner.value) : storeOwner.value)
+const headerName = computed(() => account.isAuthenticated && account.user?.account_role === 'staff' ? (account.currentStore?.name || storeName.value) : (account.isAuthenticated ? 'Di Kasirin' : storeName.value))
+const headerOwner = computed(() => account.isAuthenticated ? (account.user?.account_role === 'staff' ? (account.user.name || 'Staf') : (account.user?.name || storeOwner.value)) : storeOwner.value)
 const headerLogo = computed(() => account.isAuthenticated && account.currentStore?.logo_ref ? account.currentStore.logo_ref : storeLogo.value)
 const visibleMenu = computed(() => menu.filter((item) => {
   if (item.to === '/products') return account.hasPermission('products')

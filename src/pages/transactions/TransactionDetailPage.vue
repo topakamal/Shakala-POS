@@ -9,6 +9,7 @@ import { useSalesStore } from '@/stores/sales'
 import { useSettingsStore } from '@/stores/settings'
 import { useMediaStore } from '@/stores/media'
 import { usePrinterStore } from '@/stores/printer'
+import { useAccountStore } from '@/stores/account'
 import { capabilities } from '@/services/capabilities/registry'
 import type { PrinterCapability } from '@/services/capabilities/registry'
 import { buildReceipt } from '@/lib/receipt'
@@ -20,6 +21,7 @@ import type { Sale, SaleItem } from '@/db/types'
 const route = useRoute()
 const sales = useSalesStore()
 const settings = useSettingsStore()
+const account = useAccountStore()
 
 const sale = ref<Sale | null>(null)
 const items = ref<SaleItem[]>([])
@@ -51,8 +53,9 @@ async function printReceipt() {
     .map((element) => [element.imageRef!, media.url(element.imageRef)]))
   await printer.print(
     buildReceipt(sale.value, items.value, {
-      storeName: settings.storeName,
-      storeOwner: settings.storeOwner,
+      storeName: sale.value.outlet_name ?? account.currentStore?.name ?? settings.storeName,
+      storeOwner: sale.value.actor_name ?? (account.user?.account_role === 'staff' ? account.user.name : 'owner'),
+      actorName: sale.value.actor_name ?? (account.user?.account_role === 'staff' ? account.user.name : 'owner'),
       headerMode: settings.receiptHeader,
       logoDataUrl: media.url(settings.storeLogo),
       headerText: settings.receiptHeaderText,
@@ -95,6 +98,14 @@ async function printReceipt() {
         <div v-if="sale.status !== 'open'" class="mt-1.5 flex items-center justify-between text-sm">
           <span class="text-muted-foreground">Metode</span>
           <span>{{ PAY_LABEL[sale.payment_method] ?? sale.payment_method }}</span>
+        </div>
+        <div class="mt-1.5 flex items-center justify-between text-sm">
+          <span class="text-muted-foreground">Outlet</span>
+          <span>{{ sale.outlet_name ?? 'owner' }}</span>
+        </div>
+        <div class="mt-1.5 flex items-center justify-between text-sm">
+          <span class="text-muted-foreground">Kasir / akun</span>
+          <span>{{ sale.actor_name ?? 'owner' }}</span>
         </div>
         <div v-if="sale.status === 'open'" class="mt-3">
           <Badge variant="warning">Open Bill</Badge>

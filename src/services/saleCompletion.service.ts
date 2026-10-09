@@ -66,6 +66,8 @@ export async function createSaleCashflow(
 ): Promise<void> {
   const category = await new CashflowCategoryRepository(db).systemSales()
   await new CashflowEntryRepository(db).create({
+    outlet_name: sale.outlet_name,
+    actor_name: sale.actor_name,
     category_id: category?.id ?? null,
     session_id: sale.session_id,
     direction: 'debit',

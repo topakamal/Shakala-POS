@@ -53,6 +53,8 @@ export class OpenBillService {
     const result = await this.db.transaction(async (tx) => {
       const sales = new SaleRepository(tx)
       const sale = await sales.create({
+        outlet_name: input.outletName ?? null,
+        actor_name: input.actorName ?? null,
         session_id: null,
         number: await sales.nextNumber(input.devicePrefix, openedAt),
         subtotal: amounts.subtotal,
@@ -101,6 +103,8 @@ export class OpenBillService {
         tax: amounts.tax,
         total: amounts.total,
         open_bill_label: openBillLabel(sale, input),
+        outlet_name: input.outletName ?? sale.outlet_name,
+        actor_name: input.actorName ?? sale.actor_name,
       })
       if (updated === null) throw new CheckoutError({ kind: 'sale-not-found', saleId: sale.id })
       const items = await new SaleItemRepository(tx).replaceActiveSnapshots(sale.id, input.lines)
@@ -133,6 +137,8 @@ export class OpenBillService {
       assertOrigin(sale, input.deviceId)
       const stock = await validateSaleStock(tx, input.lines)
       const updated = await sales.update(sale.id, {
+        outlet_name: input.outletName ?? sale.outlet_name,
+        actor_name: input.actorName ?? sale.actor_name,
         session_id: input.sessionId ?? null,
         subtotal: amounts.subtotal,
         discount: amounts.discount,

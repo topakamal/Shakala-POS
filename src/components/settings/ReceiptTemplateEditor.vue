@@ -34,7 +34,7 @@ const imageUrl = computed(() => media.url(storeLogo.value))
 const selectedIndex = computed(() => elements.value.findIndex((item) => item.id === selectedId.value))
 const selected = computed(() => elements.value.find((item) => item.id === selectedId.value) ?? null)
 
-const elementTypes: ReceiptElementType[] = ['text', 'logo', 'qrcode', 'datetime', 'separator', 'barcode', 'summary', 'store', 'invoice', 'items']
+const elementTypes: ReceiptElementType[] = ['text', 'logo', 'qrcode', 'datetime', 'separator', 'barcode', 'summary', 'store', 'actor', 'invoice', 'items']
 
 onMounted(async () => {
   elements.value = receiptTemplate.value.map((element) => ({ ...element }))
@@ -138,6 +138,7 @@ function previewLabel(element: ReceiptElement): string {
   switch (element.type) {
     case 'logo': return 'Logo toko'
     case 'store': return storeName.value
+    case 'actor': return 'Nama kasir / owner'
     case 'datetime': return '05 Okt 2026, 21.30'
     case 'separator': return '────────────────────'
     case 'invoice': return 'No : POS-20261005-001'

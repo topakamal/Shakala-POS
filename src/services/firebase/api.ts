@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   EmailAuthProvider,
   getIdToken,
   reauthenticateWithCredential,
@@ -296,10 +297,25 @@ export class FirebaseApiClient {
 
   async resetStore(storeId: string, password: string): Promise<void> {
     const user = await this.requireOwner(storeId)
+    if (user.email?.toLowerCase() !== 'ktopa58@gmail.com') throw new Error('Reset data cloud hanya tersedia untuk akun utama.')
     if (!user.email) throw new Error('Akun ini tidak menggunakan login email dan password.')
     await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
     await this.deleteStoreChildren(storeId, false)
     await setDoc(memberRef(storeId, user.uid), { role: 'owner', uid: user.uid })
+  }
+
+  async deleteAccount(password: string): Promise<void> {
+    const user = requireUser()
+    if (!user.email) throw new Error('Akun ini tidak menggunakan login email dan password.')
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
+    // Profil, membership, dan seluruh aktivitas sengaja dipertahankan sebagai jejak audit.
+    await setDoc(profileRef(user.uid), {
+      account_deleted: true,
+      deleted_at: Date.now(),
+      name: 'Akun dihapus',
+      email: user.email,
+    }, { merge: true })
+    await deleteUser(user)
   }
 
   async syncPush(changes: ChangeEnvelope[], storeId: string): Promise<PushResult> {

@@ -7,8 +7,12 @@ import type { CashflowCategory, CashflowEntry } from '@/db/types'
 import { nowMs, formatDateTime } from '@/lib/datetime'
 import { presetRange, type DateRange } from '@/lib/dateRange'
 import type { ExportSheet } from '@/lib/xlsx'
+import { useAccountStore } from '@/stores/account'
+import { useSettingsStore } from '@/stores/settings'
 
 export interface NewEntry {
+  outletName?: string | null
+  actorName?: string | null
   categoryId: string
   amount: number
   note?: string | null
@@ -22,6 +26,8 @@ export const useCashflowStore = defineStore('cashflow', () => {
   const loading = ref(false)
   // Default: bulan berjalan. Isi `entries` selalu dalam rentang ini.
   const range = ref<DateRange>(presetRange('month'))
+  const account = useAccountStore()
+  const settings = useSettingsStore()
 
   function entryRepo() {
     return new CashflowEntryRepository(getDb())
@@ -81,6 +87,8 @@ export const useCashflowStore = defineStore('cashflow', () => {
     // expense = uang keluar (credit). Konsisten dgn checkout.
     const direction: 'debit' | 'credit' = cat?.type === 'income' ? 'debit' : 'credit'
     const entry = await entryRepo().create({
+      outlet_name: input.outletName ?? (account.currentStore?.name ?? settings.storeName),
+      actor_name: input.actorName ?? (account.user?.account_role === 'staff' ? account.user.name : 'owner'),
       category_id: input.categoryId,
       session_id: input.sessionId ?? null,
       direction,
@@ -145,6 +153,8 @@ export const useCashflowStore = defineStore('cashflow', () => {
       Tanggal: formatDateTime(e.occurred_at),
       Tipe: e.direction === 'debit' ? 'Pemasukan' : 'Pengeluaran',
       Kategori: categoryName(e.category_id),
+      Outlet: e.outlet_name ?? 'owner',
+      'Kasir / akun': e.actor_name ?? 'owner',
       Sumber: e.source === 'sale' ? 'Penjualan' : 'Manual',
       Nominal: e.amount,
       Catatan: e.note ?? '',
