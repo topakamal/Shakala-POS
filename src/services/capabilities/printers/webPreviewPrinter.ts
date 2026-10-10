@@ -17,7 +17,8 @@ export class WebPreviewPrinter implements PrinterCapability {
 
   async print(job: ReceiptJob): Promise<void> {
     const html = job.html ?? await this.renderHtml(job)
-    const w = window.open('', '_blank', 'width=380,height=640')
+    const wide = (job.paperWidth ?? 32) > 32
+    const w = window.open('', '_blank', `width=${wide ? 480 : 380},height=640`)
     if (!w) return
     w.document.write(html)
     w.document.close()
@@ -28,13 +29,20 @@ export class WebPreviewPrinter implements PrinterCapability {
   }
 
   private async renderHtml(job: ReceiptJob): Promise<string> {
+    // Lebar preview mengikuti setting kertas: 58mm ≈ 32 kolom, 80mm ≈ 48 kolom.
+    const wide = (job.paperWidth ?? 32) > 32
+    const pageWidth = wide ? 400 : 280
+    const imgMax = wide ? 280 : 190
+    const imgMaxH = wide ? 180 : 120
+    const logoMaxW = wide ? 280 : 190
+    const logoMaxH = wide ? 90 : 62
     const logo = job.logoDataUrl
-      ? `<img src="${job.logoDataUrl}" alt="Logo toko" style="display:block;max-width:190px;max-height:62px;margin:0 auto 2px;object-fit:contain" />`
+      ? `<img src="${job.logoDataUrl}" alt="Logo toko" style="display:block;max-width:${logoMaxW}px;max-height:${logoMaxH}px;margin:0 auto 2px;object-fit:contain" />`
       : ''
     const renderedLines: string[] = []
     for (const line of job.lines) {
       if (line.imageDataUrl) {
-        renderedLines.push(`<img src="${line.imageDataUrl}" alt="Elemen struk" style="display:block;max-width:190px;max-height:120px;margin:2px auto;object-fit:contain" />`)
+        renderedLines.push(`<img src="${line.imageDataUrl}" alt="Elemen struk" style="display:block;max-width:${imgMax}px;max-height:${imgMaxH}px;margin:2px auto;object-fit:contain" />`)
         continue
       }
       if (line.barcodeValue) {
@@ -59,7 +67,7 @@ export class WebPreviewPrinter implements PrinterCapability {
     const body = renderedLines.join('')
     return `<!doctype html><html><head><meta charset="utf-8"><title>${job.title}</title>
       <style>
-        body{font-family:'Courier New',monospace;width:280px;margin:0 auto;padding:4px;color:#000}
+        body{font-family:'Courier New',monospace;width:${pageWidth}px;margin:0 auto;padding:4px;color:#000}
         .divider{border-top:1px dashed #000;margin:2px 0}
       </style></head><body>${logo}${body}</body></html>`
   }

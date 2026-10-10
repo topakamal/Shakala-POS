@@ -68,6 +68,7 @@ async function testPrint() {
   try {
     await cap.value.print({
       title: 'Test Print',
+      paperWidth: w,
       lines: [
         { text: 'DI KASIRIN', align: 'center', bold: true, size: 'large' },
         { text: 'Struk Percobaan', align: 'center' },

@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useSettingsStore } from '@/stores/settings'
 import { useAccountStore } from '@/stores/account'
 import { useMediaStore } from '@/stores/media'
+import { usePrinterStore } from '@/stores/printer'
 import { encodeQrToDataUrl } from '@/lib/qris'
 import { downscale, pickImage } from '@/lib/image'
 import {
@@ -21,6 +22,8 @@ import { ArrowDown, ArrowUp, Check, Image, Plus, Redo2, Save, Trash2, Undo2 } fr
 const settings = useSettingsStore()
 const account = useAccountStore()
 const media = useMediaStore()
+const printer = usePrinterStore()
+const { paperWidth } = storeToRefs(printer)
 const { storeName, storeLogo, qrisPayload, receiptTemplate } = storeToRefs(settings)
 const elements = ref<ReceiptElement[]>([])
 const history = ref<ReceiptElement[][]>([])
@@ -41,6 +44,7 @@ const elementTypes: ReceiptElementType[] = ['text', 'logo', 'qrcode', 'datetime'
 
 onMounted(async () => {
   elements.value = receiptTemplate.value.map((element) => ({ ...element }))
+  await printer.load()
   await media.ensure([storeLogo.value, ...elements.value.map((element) => element.imageRef)])
   await refreshCodes()
 })
@@ -158,7 +162,7 @@ function previewLabel(element: ReceiptElement): string {
   <section class="space-y-3">
     <div class="flex items-center justify-between px-1">
       <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Editor Struk</p>
-      <span class="text-[11px] text-muted-foreground">58 mm</span>
+      <span class="text-[11px] text-muted-foreground">{{ paperWidth === 48 ? '80 mm' : '58 mm' }}</span>
     </div>
     <div class="overflow-hidden rounded-2xl border border-border bg-card">
       <div class="grid grid-cols-2 bg-muted p-1">
