@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
   Package, Search, ShoppingCart, Check, Printer, PlusCircle, DoorOpen, DoorClosed, ScanLine,
-  ReceiptText, Trash2, X,
+  ReceiptText, Trash2, X, RefreshCw,
 } from 'lucide-vue-next'
 import { useProductsStore } from '@/stores/products'
 import { useCategoriesStore } from '@/stores/categories'
@@ -24,6 +24,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useCashierStore } from '@/stores/cashier'
 import { usePrinterStore } from '@/stores/printer'
 import { useAccountStore } from '@/stores/account'
+import { useSyncStore } from '@/stores/sync'
 import { capabilities } from '@/services/capabilities/registry'
 import type { PrinterCapability } from '@/services/capabilities/registry'
 import { CheckoutError, type CheckoutResult } from '@/services/checkout.service'
@@ -44,6 +45,7 @@ const sales = useSalesStore()
 const settings = useSettingsStore()
 const cashier = useCashierStore()
 const account = useAccountStore()
+const sync = useSyncStore()
 const { filtered, query, categoryFilter } = storeToRefs(products)
 const { openBills } = storeToRefs(sales)
 
@@ -61,6 +63,7 @@ const holdLabel = ref('')
 const selectedDiscardBill = ref<Sale | null>(null)
 const openBillBusyId = ref<string | null>(null)
 const operationError = ref<string | null>(null)
+const refreshing = ref(false)
 
 const activityOutletName = computed(() => account.isAuthenticated ? (account.currentStore?.name ?? settings.storeName) : settings.storeName)
 const activityActorName = computed(() => account.isAuthenticated && account.user?.account_role === 'staff' ? account.user.name : 'owner')
@@ -110,6 +113,26 @@ async function refreshPosState() {
   await products.load()
   await media.ensure(products.items.map((product) => product.image_path))
   await cashier.refreshSummary()
+}
+
+/**
+ * Refresh manual dari halaman POS — untuk semua role (owner & staf).
+ * Menarik perubahan terbaru dari cloud dulu (mis. produk yang baru
+ * ditambahkan owner), baru memuat ulang daftar dari database lokal.
+ */
+async function refreshProducts() {
+  if (refreshing.value) return
+  refreshing.value = true
+  operationError.value = null
+  try {
+    await sync.syncNow()
+    await categories.load()
+    await refreshPosState()
+  } catch (error) {
+    operationError.value = error instanceof Error ? error.message : 'Gagal memuat ulang produk.'
+  } finally {
+    refreshing.value = false
+  }
 }
 
 function openHoldForm() {
@@ -335,6 +358,16 @@ function newTransaction() {
   <div class="flex h-full flex-col">
     <AppHeader title="Point of Sale" :subtitle="headerSubtitle">
       <template #actions>
+        <Button
+          variant="outline"
+          size="icon"
+          title="Muat ulang produk"
+          aria-label="Muat ulang produk"
+          :disabled="refreshing"
+          @click="refreshProducts"
+        >
+          <RefreshCw class="size-4" :class="refreshing ? 'animate-spin' : ''" />
+        </Button>
         <Button variant="outline" size="sm" class="gap-1.5" @click="openOpenBills">
           <ReceiptText class="size-4" /> Open Bills
         </Button>
