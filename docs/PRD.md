@@ -1,6 +1,6 @@
 # PRD — Di Kasirin
 
-**Versi dokumen:** 0.1 · **Status:** aktif · **App id:** `com.karuhundeveloper.poskacaw`
+**Versi dokumen:** 0.1 · **Status:** aktif · **App id:** `com.dikasirin.aja`
 
 ## 1. Ringkasan
 

@@ -6,11 +6,10 @@ kasir, cashflow, cetak struk thermal — lalu **sinkron sendiri ke cloud
 "POS Pro"** begitu ada sinyal (login online/Google, sync dua arah). Gratis,
 tanpa langganan.
 
-**[⬇ Unduh APK terbaru](https://github.com/karuhun-developer/pos-android/releases/latest)**
-· [Panel web POS Pro](https://github.com/karuhun-developer/pos-web)
+**[⬇ Unduh APK terbaru](https://github.com/topakamal/Shakala-POS/releases/latest)**
 
 - **App id:** `com.dikasirin.aja`
-- **Backend (opsional):** [POS Pro](https://github.com/karuhun-developer/pos-web) — Laravel + Sanctum
+- **Backend (opsional):** POS Pro — Laravel + Sanctum
 - **Status:** Phase 0–7 selesai (offline penuh + sync + build Android jalan).
   Printer thermal (ESC/POS via Bluetooth SPP & USB) sudah jalan di Android —
   lihat [Roadmap](#roadmap).
