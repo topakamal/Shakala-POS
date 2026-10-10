@@ -29,7 +29,7 @@ import javax.crypto.spec.GCMParameterSpec;
 public class SecureCredentialPlugin extends Plugin {
     private static final String PREFERENCES_NAME = "pos_pro_secure_credentials";
     private static final String CREDENTIAL_KEY = "bearer";
-    private static final String KEYSTORE_ALIAS = "pos_kacaw_pos_pro_bearer_v1";
+    private static final String KEYSTORE_ALIAS = "di_kasirin_pos_pro_bearer_v1";
     private static final String KEYSTORE_NAME = "AndroidKeyStore";
     private static final String CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int GCM_TAG_LENGTH_BITS = 128;

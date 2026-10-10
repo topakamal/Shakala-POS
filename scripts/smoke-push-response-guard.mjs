@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 
 const BASE = process.env.BASE ?? 'http://localhost:5173'
-const SCREENSHOT = process.env.SCREENSHOT ?? '/tmp/pos-kacaw-ack-guard-evidence/push-response-guard-browser.png'
+const SCREENSHOT = process.env.SCREENSHOT ?? '/tmp/di-kasirin-ack-guard-evidence/push-response-guard-browser.png'
 
 const browser = await chromium.launch()
 const context = await browser.newContext()

@@ -33,7 +33,7 @@ gagal dengan `DEVELOPER_ERROR` (code 10).
      `VITE_GOOGLE_CLIENT_ID=<web-client-id>`. Ini yang dipakai FE **dan** server
      sebagai `server_client_id`.
    - **Android** → isi:
-     - **Package name:** `com.karuhundeveloper.poskacaw`
+     - **Package name:** `com.dikasirin.aja`
      - **SHA-1 (debug):** `55:E5:0E:C5:98:06:46:69:35:9B:9D:F7:94:97:EE:88:A3:B4:7E:9C`
    > Client ID Android **tidak** dimasukkan ke kode — cukup terdaftar di GCP agar
    > Google mengenali aplikasi. Yang dipakai di app tetap **Web** Client ID.

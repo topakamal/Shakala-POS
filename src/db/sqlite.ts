@@ -8,7 +8,7 @@ import type { Db, RunResult } from './types'
 import { runMigrations } from './migrations'
 import { seedDefaultCashflowCategories } from './seedCashflow'
 
-const DB_NAME = 'poskacaw'
+const DB_NAME = 'dikasirin'
 const DB_VERSION = 1
 
 let sqlite: SQLiteConnection | null = null

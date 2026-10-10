@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { chromium } from 'playwright'
 
 const BASE = process.env.BASE ?? 'http://127.0.0.1:4173'
-const ARTIFACT_DIR = process.env.ARTIFACT_DIR ?? await mkdtemp(join(tmpdir(), 'pos-kacaw-xlsx-security-'))
+const ARTIFACT_DIR = process.env.ARTIFACT_DIR ?? await mkdtemp(join(tmpdir(), 'di-kasirin-xlsx-security-'))
 const PRODUCT_COLUMNS = ['nama', 'kategori', 'sku', 'barcode', 'tipe_barcode', 'harga_jual', 'harga_modal', 'lacak_stok', 'stok', 'aktif']
 const REJECTED_PRODUCT_NAMES = ['Formula product', 'CSV formula product', 'Macro product', 'Linked product', 'Embedded package product']
 const EXPECT_EMBEDDED_WRITE = process.env.EXPECT_EMBEDDED_WRITE === '1'
