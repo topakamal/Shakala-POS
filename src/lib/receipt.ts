@@ -81,7 +81,7 @@ export function buildReceipt(
         case 'logo':
           {
             const image = element.imageRef ? opts.imageDataByRef?.[element.imageRef] : opts.logoDataUrl
-            if (image) lines.push({ text: '', imageDataUrl: image, align: element.align })
+            if (image) lines.push({ text: '', imageDataUrl: image, align: element.align, imageScale: element.imageScale ?? 100 })
           }
           break
         case 'store':

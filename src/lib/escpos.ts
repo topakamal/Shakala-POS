@@ -19,6 +19,7 @@ async function appendRasterLogo(
   push: (...bytes: number[]) => void,
   dataUrl: string,
   maxWidth: number,
+  scalePercent = 100,
 ): Promise<void> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const value = new Image()
@@ -61,7 +62,8 @@ async function appendRasterLogo(
   const cropBottom = maxY >= 0 ? Math.min(source.height - 1, maxY + margin) : source.height - 1
   const cropWidth = Math.max(1, cropRight - cropX + 1)
   const cropHeight = Math.max(1, cropBottom - cropY + 1)
-  const scale = Math.min(1, maxWidth / cropWidth, 140 / cropHeight)
+  const effectiveMax = Math.max(1, Math.floor((maxWidth * scalePercent) / 100))
+  const scale = Math.min(1, effectiveMax / cropWidth, 140 / cropHeight)
   const width = Math.max(1, Math.floor(cropWidth * scale))
   const height = Math.max(1, Math.floor(cropHeight * scale))
   const canvas = document.createElement('canvas')
@@ -115,7 +117,7 @@ export async function encodeReceipt(job: ReceiptJob, opts: EscposOpts = {}): Pro
 
   if (job.logoDataUrl) {
     try {
-      await appendRasterLogo(push, job.logoDataUrl, job.paperWidth && job.paperWidth > 32 ? 576 : 384)
+      await appendRasterLogo(push, job.logoDataUrl, job.paperWidth && job.paperWidth > 32 ? 576 : 384, 100)
     } catch {
       // Cetak teks tetap dilanjutkan bila format logo tidak didukung.
     }
@@ -128,7 +130,7 @@ export async function encodeReceipt(job: ReceiptJob, opts: EscposOpts = {}): Pro
   for (const line of job.lines) {
     if (line.imageDataUrl) {
       try {
-        await appendRasterLogo(push, line.imageDataUrl, job.paperWidth && job.paperWidth > 32 ? 576 : 384)
+        await appendRasterLogo(push, line.imageDataUrl, job.paperWidth && job.paperWidth > 32 ? 576 : 384, line.imageScale ?? 100)
       } catch {
         // Lanjut cetak elemen lain bila gambar tidak bisa dibaca printer.
       }
@@ -139,7 +141,7 @@ export async function encodeReceipt(job: ReceiptJob, opts: EscposOpts = {}): Pro
         const canvas = document.createElement('canvas')
         const JsBarcode = (await import('jsbarcode')).default
         JsBarcode(canvas, line.barcodeValue, { format: 'CODE128', displayValue: true, height: 48, margin: 2, fontSize: 12 })
-        await appendRasterLogo(push, canvas.toDataURL('image/png'), job.paperWidth && job.paperWidth > 32 ? 576 : 384)
+        await appendRasterLogo(push, canvas.toDataURL('image/png'), job.paperWidth && job.paperWidth > 32 ? 576 : 384, 100)
       } catch {
         text(line.barcodeValue)
         push(0x0a)

@@ -37,12 +37,13 @@ export class WebPreviewPrinter implements PrinterCapability {
     const logoMaxW = wide ? 280 : 190
     const logoMaxH = wide ? 90 : 62
     const logo = job.logoDataUrl
-      ? `<img src="${job.logoDataUrl}" alt="Logo toko" style="display:block;max-width:${logoMaxW}px;max-height:${logoMaxH}px;margin:0 auto 2px;object-fit:contain" />`
+      ? `<img src="${job.logoDataUrl}" alt="Logo toko" style="display:block;max-width:${logoMaxW}px;max-height:${logoMaxH}px;margin:0 auto 2px;object-fit:contain;background:#fff" />`
       : ''
     const renderedLines: string[] = []
     for (const line of job.lines) {
       if (line.imageDataUrl) {
-        renderedLines.push(`<img src="${line.imageDataUrl}" alt="Elemen struk" style="display:block;max-width:${imgMax}px;max-height:${imgMaxH}px;margin:2px auto;object-fit:contain" />`)
+        const scaleFactor = (line.imageScale ?? 100) / 100
+        renderedLines.push(`<img src="${line.imageDataUrl}" alt="Elemen struk" style="display:block;max-width:${Math.round(imgMax * scaleFactor)}px;max-height:${Math.round(imgMaxH * scaleFactor)}px;margin:2px auto;object-fit:contain;background:#fff" />`)
         continue
       }
       if (line.barcodeValue) {

@@ -105,7 +105,7 @@ function updateSelected(patch: Partial<ReceiptElement>) {
 }
 
 async function chooseElementImage() {
-  const dataUrl = await pickImage()
+  const dataUrl = await pickImage({ preserveAlpha: true })
   if (!dataUrl || !selected.value) return
   const image = await downscale(dataUrl, { maxDim: 384, mime: 'image/png' })
   const imageRef = await media.save(image)
@@ -197,7 +197,7 @@ function previewLabel(element: ReceiptElement): string {
               @click="edit(element)"
             >
               <template v-if="element.type === 'logo'">
-                <img v-if="element.imageRef ? media.url(element.imageRef) : imageUrl" :src="(element.imageRef ? media.url(element.imageRef) : imageUrl) ?? undefined" alt="Logo toko" class="mx-auto max-h-14 max-w-28 object-contain" />
+                <img v-if="element.imageRef ? media.url(element.imageRef) : imageUrl" :src="(element.imageRef ? media.url(element.imageRef) : imageUrl) ?? undefined" alt="Logo toko" class="mx-auto max-h-14 bg-white object-contain" :style="{ maxWidth: `${(7 * (element.imageScale ?? 100)) / 100}rem` }" />
                 <span v-else class="block py-1 text-center text-muted-foreground">[Logo toko]</span>
               </template>
               <template v-else-if="element.type === 'qrcode'">
@@ -246,7 +246,7 @@ function previewLabel(element: ReceiptElement): string {
         </div>
         <div v-else-if="selected.type === 'logo'" class="space-y-2">
           <p class="text-sm">Pilih gambar untuk elemen ini, atau gunakan logo Profil Toko.</p>
-          <img v-if="selected.imageRef ? media.url(selected.imageRef) : imageUrl" :src="(selected.imageRef ? media.url(selected.imageRef) : imageUrl) ?? undefined" alt="Gambar struk" class="mx-auto max-h-32 max-w-48 object-contain" />
+          <img v-if="selected.imageRef ? media.url(selected.imageRef) : imageUrl" :src="(selected.imageRef ? media.url(selected.imageRef) : imageUrl) ?? undefined" alt="Gambar struk" class="mx-auto max-h-32 max-w-48 bg-white object-contain" />
           <p v-else class="text-xs text-amber-600">Belum ada gambar. Tambahkan gambar atau logo pada Profil Toko.</p>
           <Button variant="outline" class="w-full" @click="chooseElementImage">Pilih gambar</Button>
         </div>
@@ -265,7 +265,12 @@ function previewLabel(element: ReceiptElement): string {
             <option value="left">Kiri</option><option value="center">Tengah</option><option value="right">Kanan</option>
           </select>
         </div>
-        <div class="space-y-1.5">
+        <div v-if="selected.type === 'logo'" class="space-y-1.5">
+          <Label for="element-scale">Ukuran gambar — {{ selected.imageScale ?? 100 }}%</Label>
+          <input id="element-scale" type="range" min="10" max="100" step="5" :value="selected.imageScale ?? 100" class="w-full accent-primary" @input="updateSelected({ imageScale: Number(($event.target as HTMLInputElement).value) })" />
+          <p class="text-xs text-muted-foreground">Persentase dari lebar maksimum kertas struk.</p>
+        </div>
+        <div v-else class="space-y-1.5">
           <Label for="element-size">Ukuran teks</Label>
           <select id="element-size" :value="selected.size" class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" @change="updateSelected({ size: ($event.target as HTMLSelectElement).value as ReceiptElement['size'] })">
             <option value="normal">Normal</option><option value="large">Besar</option>

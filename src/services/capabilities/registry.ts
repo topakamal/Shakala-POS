@@ -10,6 +10,8 @@ export interface ReceiptLine {
   bold?: boolean
   size?: 'normal' | 'large'
   imageDataUrl?: string
+  /** Ukuran gambar dalam persen (10–100) dari lebar maksimum kertas. */
+  imageScale?: number
   barcodeValue?: string
 }
 

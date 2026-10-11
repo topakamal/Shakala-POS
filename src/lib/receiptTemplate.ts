@@ -19,6 +19,8 @@ export interface ReceiptElement {
   bold: boolean
   size: 'normal' | 'large'
   imageRef?: string
+  /** Ukuran gambar/logo dalam persen (10–100) dari lebar maksimum kertas. */
+  imageScale?: number
 }
 
 export const RECEIPT_ELEMENT_LABELS: Record<ReceiptElementType, string> = {
@@ -47,6 +49,7 @@ export function newReceiptElement(type: ReceiptElementType): ReceiptElement {
     align: type === 'logo' || type === 'store' || type === 'qrcode' || type === 'barcode' ? 'center' : 'left',
     bold: type === 'store' || type === 'summary',
     size: type === 'store' || type === 'summary' ? 'large' : 'normal',
+    ...(type === 'logo' ? { imageScale: 100 } : {}),
   }
 }
 
@@ -66,12 +69,20 @@ export function parseReceiptTemplate(value: string | undefined): ReceiptElement[
     const parsed: unknown = JSON.parse(value)
     if (!Array.isArray(parsed) || !parsed.length) return defaultReceiptTemplate()
     const allowed = new Set<ReceiptElementType>(Object.keys(RECEIPT_ELEMENT_LABELS) as ReceiptElementType[])
-    return parsed.filter((row): row is ReceiptElement =>
-      !!row && typeof row === 'object' && typeof row.id === 'string' && allowed.has(row.type)
-      && ['left', 'center', 'right'].includes(row.align)
-      && ['normal', 'large'].includes(row.size)
-      && typeof row.text === 'string' && typeof row.bold === 'boolean')
+    return parsed
+      .filter((row): row is ReceiptElement =>
+        !!row && typeof row === 'object' && typeof row.id === 'string' && allowed.has(row.type)
+        && ['left', 'center', 'right'].includes(row.align)
+        && ['normal', 'large'].includes(row.size)
+        && typeof row.text === 'string' && typeof row.bold === 'boolean')
+      .map((row) => ({ ...row, imageScale: normalizeImageScale(row.imageScale) }))
   } catch {
     return defaultReceiptTemplate()
   }
+}
+
+/** Normalisasi persen ukuran gambar: 10–100, undefined kalau tidak valid. */
+function normalizeImageScale(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined
+  return Math.min(100, Math.max(10, Math.round(value)))
 }

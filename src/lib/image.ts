@@ -15,7 +15,18 @@ export interface ProcessedImage {
  * - Web: hidden `<input type="file">` — nol dependency tambahan.
  * Balikin data URL (`data:<mime>;base64,…`) atau null kalau dibatalkan.
  */
-export async function pickImage(): Promise<string | null> {
+export interface PickImageOptions {
+  /**
+   * true → pakai file picker bawaan (input file) meski di native.
+   * Plugin Camera Capacitor selalu mengompres ke JPEG sehingga transparansi
+   * PNG (logo) hancur menjadi latar hitam — jalur ini menjaga format asli
+   * file yang dipilih pengguna.
+   */
+  preserveAlpha?: boolean
+}
+
+export async function pickImage(opts: PickImageOptions = {}): Promise<string | null> {
+  if (opts.preserveAlpha) return pickImageWeb()
   if (Capacitor.isNativePlatform()) {
     const { Camera, CameraResultType, CameraSource } = await import(
       '@capacitor/camera'

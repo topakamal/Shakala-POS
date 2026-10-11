@@ -95,7 +95,7 @@ async function removeQris() {
 }
 
 async function chooseLogo() {
-  const dataUrl = await pickImage()
+  const dataUrl = await pickImage({ preserveAlpha: true })
   if (!dataUrl) return
   logoBusy.value = true
   try {
