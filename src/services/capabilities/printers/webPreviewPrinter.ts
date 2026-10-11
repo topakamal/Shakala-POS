@@ -32,8 +32,6 @@ export class WebPreviewPrinter implements PrinterCapability {
     // Lebar preview mengikuti setting kertas: 58mm ≈ 32 kolom, 80mm ≈ 48 kolom.
     const wide = (job.paperWidth ?? 32) > 32
     const pageWidth = wide ? 400 : 280
-    const imgMax = wide ? 280 : 190
-    const imgMaxH = wide ? 180 : 120
     const logoMaxW = wide ? 280 : 190
     const logoMaxH = wide ? 90 : 62
     const logo = job.logoDataUrl
@@ -42,8 +40,8 @@ export class WebPreviewPrinter implements PrinterCapability {
     const renderedLines: string[] = []
     for (const line of job.lines) {
       if (line.imageDataUrl) {
-        const scaleFactor = (line.imageScale ?? 100) / 100
-        renderedLines.push(`<img src="${line.imageDataUrl}" alt="Elemen struk" style="display:block;max-width:${Math.round(imgMax * scaleFactor)}px;max-height:${Math.round(imgMaxH * scaleFactor)}px;margin:2px auto;object-fit:contain;background:#fff" />`)
+        const scalePct = Math.round(line.imageScale ?? 100)
+        renderedLines.push(`<img src="${line.imageDataUrl}" alt="Elemen struk" style="display:block;width:${scalePct}%;max-width:100%;margin:2px auto;object-fit:contain;background:#fff" />`)
         continue
       }
       if (line.barcodeValue) {

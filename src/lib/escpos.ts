@@ -63,7 +63,9 @@ async function appendRasterLogo(
   const cropWidth = Math.max(1, cropRight - cropX + 1)
   const cropHeight = Math.max(1, cropBottom - cropY + 1)
   const effectiveMax = Math.max(1, Math.floor((maxWidth * scalePercent) / 100))
-  const scale = Math.min(1, effectiveMax / cropWidth, 140 / cropHeight)
+  // Izinkan upscale hingga 2x: logo yang resolusinya lebih kecil dari lebar
+  // kertas tetap bisa memenuhi lebar saat slider 100% ("ukuran penuh").
+  const scale = Math.min(2, effectiveMax / cropWidth, 140 / cropHeight)
   const width = Math.max(1, Math.floor(cropWidth * scale))
   const height = Math.max(1, Math.floor(cropHeight * scale))
   const canvas = document.createElement('canvas')

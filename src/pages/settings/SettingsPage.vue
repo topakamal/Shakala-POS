@@ -99,8 +99,8 @@ async function chooseLogo() {
   if (!dataUrl) return
   logoBusy.value = true
   try {
-    // PNG biar transparansi logo kejaga; ukuran kecil (256px).
-    const img = await downscale(dataUrl, { maxDim: 256, mime: 'image/png' })
+    // PNG biar transparansi logo kejaga; resolusi cukup untuk upscale 2x di encoder.
+    const img = await downscale(dataUrl, { maxDim: 768, mime: 'image/png' })
     const ref_ = await media.save(img)
     await settings.setLogo(ref_) // langsung ke-update di Home & splash
     if (account.isAuthenticated) await account.updateStoreBranding(name.value.trim() || storeName.value, ref_)

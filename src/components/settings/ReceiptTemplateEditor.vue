@@ -107,7 +107,7 @@ function updateSelected(patch: Partial<ReceiptElement>) {
 async function chooseElementImage() {
   const dataUrl = await pickImage({ preserveAlpha: true })
   if (!dataUrl || !selected.value) return
-  const image = await downscale(dataUrl, { maxDim: 384, mime: 'image/png' })
+  const image = await downscale(dataUrl, { maxDim: 768, mime: 'image/png' })
   const imageRef = await media.save(image)
   updateSelected({ imageRef })
 }
@@ -197,7 +197,7 @@ function previewLabel(element: ReceiptElement): string {
               @click="edit(element)"
             >
               <template v-if="element.type === 'logo'">
-                <img v-if="element.imageRef ? media.url(element.imageRef) : imageUrl" :src="(element.imageRef ? media.url(element.imageRef) : imageUrl) ?? undefined" alt="Logo toko" class="mx-auto max-h-14 bg-white object-contain" :style="{ maxWidth: `${(7 * (element.imageScale ?? 100)) / 100}rem` }" />
+                <img v-if="element.imageRef ? media.url(element.imageRef) : imageUrl" :src="(element.imageRef ? media.url(element.imageRef) : imageUrl) ?? undefined" alt="Logo toko" class="mx-auto max-h-48 bg-white object-contain" :style="{ width: `${element.imageScale ?? 100}%` }" />
                 <span v-else class="block py-1 text-center text-muted-foreground">[Logo toko]</span>
               </template>
               <template v-else-if="element.type === 'qrcode'">
