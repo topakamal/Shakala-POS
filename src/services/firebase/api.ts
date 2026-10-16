@@ -91,11 +91,14 @@ async function payloadFor(user: User): Promise<AuthPayload> {
   let currentPermissions: StaffPermission[] | undefined
   for (const store of profileStores) {
     const membership = await getDoc(memberRef(String(store.id), user.uid))
-    const status = !membership.exists() || membership.data()?.status === 'dismissed' ? 'dismissed' : 'active'
+    const rawStatus = membership.exists() ? String(membership.data()?.status ?? '') : ''
+    const status = rawStatus === 'pending' ? 'pending' : (!membership.exists() || rawStatus === 'dismissed' ? 'dismissed' : 'active')
     if (membership.exists() && status === 'active' && String(store.id) === String(data?.current_store_id)) {
       currentPermissions = Array.isArray(membership.data()?.permissions) ? membership.data()?.permissions as StaffPermission[] : [...DEFAULT_STAFF_PERMISSIONS]
     }
-    const cloudStore = membership.exists() ? await getDoc(storeRef(String(store.id))) : null
+    // Dokumen outlet hanya boleh dibaca member aktif (atau saat pendaftaran terbuka);
+    // untuk pending/dismissed pakai nama dari profil agar login tidak gagal.
+    const cloudStore = status === 'active' ? await getDoc(storeRef(String(store.id))) : null
     stores.push({ ...store, ...(cloudStore?.exists() ? { name: String(cloudStore.data()?.name ?? store.name), logo_ref: (cloudStore.data()?.logo_ref as string | null | undefined) ?? null } : {}), status })
   }
   if (data?.account_role === 'staff') {
@@ -145,7 +148,7 @@ export class FirebaseApiClient {
     await setDoc(storeRef(storeId), {
       name: store.name,
       owner_id: credential.user.uid,
-      created_at: Date.now(), staff_signup_enabled: true,
+      created_at: Date.now(), staff_signup_enabled: false,
     })
     await setDoc(memberRef(storeId, credential.user.uid), { role: 'owner', uid: credential.user.uid, status: 'active', name: name.trim() || 'Owner', email, permissions: STAFF_PERMISSIONS })
     await setDoc(profileRef(credential.user.uid), {
@@ -180,7 +183,7 @@ export class FirebaseApiClient {
     if (profileDoc.data()?.account_role === 'staff') throw new Error('Akun staf tidak dapat membuat outlet baru.')
     const profile = await this.stores()
     const store: AccountStore = { id: crypto.randomUUID(), name: name.trim(), role: 'owner' }
-    await setDoc(storeRef(String(store.id)), { name: store.name, owner_id: user.uid, created_at: Date.now(), staff_signup_enabled: true })
+    await setDoc(storeRef(String(store.id)), { name: store.name, owner_id: user.uid, created_at: Date.now(), staff_signup_enabled: false })
     await setDoc(memberRef(String(store.id), user.uid), { role: 'owner', uid: user.uid, status: 'active', name: user.displayName || 'Owner', email: user.email || '', permissions: STAFF_PERMISSIONS })
     const stores = [...profile.stores, store]
     await updateDoc(profileRef(user.uid), { stores, current_store_id: String(store.id) })
@@ -197,26 +200,48 @@ export class FirebaseApiClient {
     const user = requireUser()
     const store = await getDoc(storeRef(storeId))
     if (!store.exists() || store.data()?.staff_signup_enabled !== true) throw new Error('Outlet tidak tersedia untuk pendaftaran staf.')
+    // Pendaftaran mandiri HANYA sebagai 'pending' — tanpa persetujuan owner,
+    // pendaftar tidak punya akses apa pun (ditegakkan juga di firestore.rules).
     const profile = await this.stores()
-    const nextStore: AccountStore = { id: storeId, name: String(store.data()?.name ?? 'Outlet'), role: 'staff', status: 'active' }
+    const nextStore: AccountStore = { id: storeId, name: String(store.data()?.name ?? 'Outlet'), role: 'staff', status: 'pending' }
     const stores = [...profile.stores.filter((item) => String(item.id) !== storeId), nextStore]
     await setDoc(memberRef(storeId, user.uid), {
-      uid: user.uid, role: 'staff', status: 'active', name: user.displayName || user.email?.split('@')[0] || 'Staf', email: user.email || '', permissions: DEFAULT_STAFF_PERMISSIONS,
+      uid: user.uid, role: 'staff', status: 'pending', name: user.displayName || user.email?.split('@')[0] || 'Staf', email: user.email || '', permissions: [],
     })
-    await updateDoc(profileRef(user.uid), { stores, current_store_id: storeId, account_role: 'staff' })
+    await updateDoc(profileRef(user.uid), { stores, current_store_id: null, account_role: 'staff' })
     return payloadFor(user)
   }
 
-  async staff(storeId: string): Promise<{ staff: StaffMember[] }> {
+  async staff(storeId: string): Promise<{ staff: StaffMember[]; staff_signup_enabled: boolean }> {
     await this.requireOwner(storeId)
-    // Backfill outlet lama agar ikut muncul pada pilihan pendaftaran staf.
-    await updateDoc(storeRef(storeId), { staff_signup_enabled: true })
+    const store = await getDoc(storeRef(storeId))
     const result = await getDocs(collection(firebaseDb, 'stores', storeId, 'members'))
     const staff: StaffMember[] = result.docs.filter((row) => row.data().role !== 'owner').map((row): StaffMember => {
       const data = row.data()
-      return { uid: row.id, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: data.status === 'dismissed' ? 'dismissed' : 'active', permissions: Array.isArray(data.permissions) ? data.permissions.filter((p): p is StaffPermission => STAFF_PERMISSIONS.includes(p)) : [...DEFAULT_STAFF_PERMISSIONS] }
+      const status = data.status === 'dismissed' ? 'dismissed' : data.status === 'pending' ? 'pending' : 'active'
+      return { uid: row.id, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status, permissions: Array.isArray(data.permissions) ? data.permissions.filter((p): p is StaffPermission => STAFF_PERMISSIONS.includes(p)) : [...DEFAULT_STAFF_PERMISSIONS] }
     })
-    return { staff }
+    return { staff, staff_signup_enabled: store.data()?.staff_signup_enabled === true }
+  }
+
+  async approveStaff(storeId: string, uid: string): Promise<StaffMember> {
+    await this.requireOwner(storeId)
+    const reference = memberRef(storeId, uid)
+    const current = await getDoc(reference)
+    if (!current.exists() || current.data()?.role === 'owner') throw new Error('Staf tidak ditemukan.')
+    if (current.data()?.status !== 'pending') throw new Error('Hanya pendaftar berstatus menunggu yang bisa disetujui.')
+    const rawPermissions: unknown = current.data()?.permissions
+    const permissions = Array.isArray(rawPermissions) && rawPermissions.length
+      ? rawPermissions.filter((p): p is StaffPermission => STAFF_PERMISSIONS.includes(p as StaffPermission))
+      : [...DEFAULT_STAFF_PERMISSIONS]
+    await updateDoc(reference, { status: 'active', permissions })
+    const data = current.data() ?? {}
+    return { uid, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: 'active', permissions }
+  }
+
+  async setStaffSignupEnabled(storeId: string, enabled: boolean): Promise<void> {
+    await this.requireOwner(storeId)
+    await updateDoc(storeRef(storeId), { staff_signup_enabled: enabled })
   }
 
   async updateStaff(storeId: string, uid: string, patch: { role?: 'staff' | 'manager'; permissions?: StaffPermission[] }): Promise<StaffMember> {
@@ -226,7 +251,8 @@ export class FirebaseApiClient {
     if (!current.exists() || current.data()?.role === 'owner') throw new Error('Staf tidak ditemukan.')
     await updateDoc(reference, { ...patch, permissions: patch.permissions ?? current.data()?.permissions ?? DEFAULT_STAFF_PERMISSIONS })
     const data: Record<string, unknown> = { ...current.data(), ...patch }
-    return { uid, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: data.status === 'dismissed' ? 'dismissed' : 'active', permissions: Array.isArray(data.permissions) ? data.permissions as StaffPermission[] : [...DEFAULT_STAFF_PERMISSIONS] }
+    const nextStatus = data.status === 'dismissed' ? 'dismissed' : data.status === 'pending' ? 'pending' : 'active'
+    return { uid, name: String(data.name ?? 'Staf'), email: String(data.email ?? ''), role: data.role === 'manager' ? 'manager' : 'staff', status: nextStatus, permissions: Array.isArray(data.permissions) ? data.permissions as StaffPermission[] : [...DEFAULT_STAFF_PERMISSIONS] }
   }
 
   async dismissStaff(storeId: string, uid: string): Promise<void> {
@@ -245,7 +271,16 @@ export class FirebaseApiClient {
     const targetStore = await getDoc(storeRef(toStoreId))
     if (!source.exists() || source.data()?.role === 'owner') throw new Error('Staf tidak ditemukan.')
     if (!targetStore.exists()) throw new Error('Outlet tujuan tidak ditemukan.')
-    await setDoc(memberRef(toStoreId, uid), { ...source.data(), status: 'active', transferred_at: Date.now() })
+    const sourceData = source.data() ?? {}
+    // Tulis dokumen member yang bersih (tanpa spread) agar lolos whitelist keys di rules.
+    await setDoc(memberRef(toStoreId, uid), {
+      uid,
+      role: sourceData.role === 'manager' ? 'manager' : 'staff',
+      status: 'active',
+      name: String(sourceData.name ?? 'Staf'),
+      email: String(sourceData.email ?? ''),
+      permissions: Array.isArray(sourceData.permissions) ? sourceData.permissions.filter((p): p is StaffPermission => STAFF_PERMISSIONS.includes(p)) : [...DEFAULT_STAFF_PERMISSIONS],
+    })
     await deleteDoc(memberRef(fromStoreId, uid))
   }
 

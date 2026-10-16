@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, Check, AlertCircle, Plus, Pencil, Trash2, KeyRound, RotateCcw, UserRound, UserX, ShieldCheck, ArrowRightLeft } from 'lucide-vue-next'
+import { Switch } from '@/components/ui/switch'
+import { Loader2, LogOut, Check, AlertCircle, Plus, Pencil, Trash2, KeyRound, RotateCcw, UserRound, UserX, UserCheck, Clock, ShieldCheck, ArrowRightLeft } from 'lucide-vue-next'
 import { Capacitor } from '@capacitor/core'
 import { useAccountStore } from '@/stores/account'
 import { STAFF_PERMISSIONS, type StaffPermission } from '@/services/api/client'
@@ -278,6 +279,27 @@ async function dismissStaffMember(uid: string) {
   try { await account.dismissStaff(uid); staffMessage.value = 'Staf dibebastugaskan.' } finally { managerBusy.value = false }
 }
 
+const pendingMembers = computed(() => account.staffMembers.filter((m) => m.status === 'pending'))
+const visibleMembers = computed(() => account.staffMembers.filter((m) => m.status !== 'pending'))
+const pendingStore = computed(() => stores.value.find((s) => s.status === 'pending') ?? null)
+
+async function approveStaffMember(uid: string) {
+  if (!confirm('Setujui pendaftar ini sebagai staf outlet?')) return
+  managerBusy.value = true
+  try { if (await account.approveStaff(uid)) staffMessage.value = 'Pendaftar disetujui sebagai staf.' } finally { managerBusy.value = false }
+}
+
+async function rejectStaffMember(uid: string) {
+  if (!confirm('Tolak pendaftar ini?')) return
+  managerBusy.value = true
+  try { if (await account.dismissStaff(uid)) staffMessage.value = 'Pendaftar ditolak.' } finally { managerBusy.value = false }
+}
+
+async function onToggleSignup(enabled: boolean) {
+  managerBusy.value = true
+  try { await account.setStaffSignupEnabled(enabled) } finally { managerBusy.value = false }
+}
+
 async function transferStaffMember(uid: string) {
   const target = transferSelection.value[uid]
   if (!target || managerBusy.value) return
@@ -344,6 +366,9 @@ const syncLabel = computed(() => {
         <Card v-if="user?.account_role === 'staff' && stores.some((s) => s.status === 'dismissed')" class="border-destructive/40 bg-destructive/5">
           <CardContent class="flex items-start gap-3 p-4"><UserX class="mt-0.5 size-5 text-destructive" /><div><p class="font-semibold text-destructive">Anda dibebastugaskan!</p><p class="text-sm text-muted-foreground">Akses Anda ke outlet tersebut telah dihentikan oleh owner.</p></div></CardContent>
         </Card>
+        <Card v-if="pendingStore" class="border-amber-500/40 bg-amber-500/5">
+          <CardContent class="flex items-start gap-3 p-4"><Clock class="mt-0.5 size-5 shrink-0 text-amber-500" /><div><p class="font-semibold text-amber-600">Menunggu persetujuan owner</p><p class="text-sm text-muted-foreground">Pendaftaran staf Anda di outlet "{{ pendingStore.name }}" sedang menunggu persetujuan owner. Anda bisa mulai bekerja setelah disetujui.</p></div></CardContent>
+        </Card>
         <section v-if="stores.length" class="space-y-2">
           <div class="flex items-center justify-between">
             <Label>Outlet</Label>
@@ -377,9 +402,21 @@ const syncLabel = computed(() => {
         </section>
         <section v-if="user?.account_role === 'owner' && currentStoreId" class="space-y-3 rounded-xl border p-4">
           <div class="flex items-center justify-between"><div><p class="font-semibold">Manajemen staf</p><p class="text-xs text-muted-foreground">Atur peran dan izin setiap staf outlet.</p></div><Button size="sm" variant="outline" @click="account.loadStaff()"><ShieldCheck class="size-4" /> Muat</Button></div>
+          <div class="flex items-center gap-3 rounded-lg bg-muted/40 p-3">
+            <div class="flex-1"><p class="text-sm font-medium">Izinkan pendaftaran staf</p><p class="text-xs text-muted-foreground">Bila aktif, orang bisa mendaftar ke outlet ini — tetap butuh persetujuan Anda.</p></div>
+            <Switch :model-value="account.staffSignupEnabled" :disabled="managerBusy" @update:model-value="onToggleSignup" />
+          </div>
           <p v-if="staffMessage" class="text-xs text-success">{{ staffMessage }}</p>
-          <p v-if="!account.staffMembers.length" class="text-sm text-muted-foreground">Belum ada staf yang bergabung.</p>
-          <div v-for="member in account.staffMembers" :key="member.uid" class="space-y-3 rounded-lg bg-muted/40 p-3">
+          <div v-if="pendingMembers.length" class="space-y-2">
+            <p class="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Menunggu persetujuan</p>
+            <div v-for="member in pendingMembers" :key="member.uid" class="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <div class="min-w-0 flex-1"><p class="truncate text-sm font-medium">{{ member.name }}</p><p class="truncate text-xs text-muted-foreground">{{ member.email }}</p></div>
+              <Button size="sm" :disabled="managerBusy" @click="approveStaffMember(member.uid)"><UserCheck class="size-4" /> Setujui</Button>
+              <Button size="sm" variant="ghost" class="text-destructive" :disabled="managerBusy" @click="rejectStaffMember(member.uid)">Tolak</Button>
+            </div>
+          </div>
+          <p v-if="!visibleMembers.length" class="text-sm text-muted-foreground">Belum ada staf yang bergabung.</p>
+          <div v-for="member in visibleMembers" :key="member.uid" class="space-y-3 rounded-lg bg-muted/40 p-3">
             <div class="flex items-center gap-2"><div class="min-w-0 flex-1"><p class="truncate font-medium">{{ member.name }}</p><p class="truncate text-xs text-muted-foreground">{{ member.email }}</p></div><Badge :variant="member.status === 'dismissed' ? 'destructive' : 'secondary'">{{ member.status === 'dismissed' ? 'Dibebastugaskan' : member.role }}</Badge></div>
             <div v-if="member.status === 'active'" class="grid grid-cols-2 gap-2 text-xs"><label v-for="permission in STAFF_PERMISSIONS" :key="permission" class="flex items-center gap-2"><input type="checkbox" :checked="member.permissions.includes(permission)" @change="updateStaffPermission(member.uid, permission, ($event.target as HTMLInputElement).checked)" /> {{ permissionLabels[permission] }}</label></div>
             <div v-if="member.status === 'active'" class="flex flex-wrap gap-2"><Button size="sm" variant="outline" @click="changeStaffRole(member.uid, member.role === 'manager' ? 'staff' : 'manager')">Jadikan {{ member.role === 'manager' ? 'staf' : 'manajer' }}</Button><Button size="sm" variant="ghost" class="text-destructive" @click="dismissStaffMember(member.uid)"><UserX class="size-4" /> Bebastugaskan</Button></div>

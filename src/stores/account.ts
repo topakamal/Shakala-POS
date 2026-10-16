@@ -47,9 +47,11 @@ interface PosCloudApi {
   deleteAccount(password: string): Promise<void>
   availableStores(): Promise<{ stores: PublicStore[] }>
   joinStore(storeId: string): Promise<AuthPayload>
-  staff(storeId: string): Promise<{ staff: StaffMember[] }>
+  staff(storeId: string): Promise<{ staff: StaffMember[]; staff_signup_enabled?: boolean }>
   updateStaff(storeId: string, uid: string, patch: { role?: 'staff' | 'manager'; permissions?: StaffPermission[] }): Promise<StaffMember>
   dismissStaff(storeId: string, uid: string): Promise<void>
+  approveStaff?(storeId: string, uid: string): Promise<StaffMember>
+  setStaffSignupEnabled?(storeId: string, enabled: boolean): Promise<void>
   transferStaff(fromStoreId: string, toStoreId: string, uid: string): Promise<void>
   updateStoreBranding(id: string | number, name: string, logoRef: string | null): Promise<{ store: AccountStore }>
   syncPush(changes: ChangeEnvelope[]): Promise<PushResult>
@@ -82,6 +84,7 @@ export const useAccountStore = defineStore('account', () => {
   const stores = ref<AccountStore[]>([])
   const availableStoreOptions = ref<PublicStore[]>([])
   const staffMembers = ref<StaffMember[]>([])
+  const staffSignupEnabled = ref(false)
   const currentStoreId = ref<string | null>(null)
   const status = ref<'idle' | 'loading'>('idle')
   const error = ref<string | null>(null)
@@ -142,6 +145,8 @@ export const useAccountStore = defineStore('account', () => {
         staff: (storeId) => firebaseApi.staff(storeId),
         updateStaff: (storeId, uid, patch) => firebaseApi.updateStaff(storeId, uid, patch),
         dismissStaff: (storeId, uid) => firebaseApi.dismissStaff(storeId, uid),
+        approveStaff: (storeId, uid) => firebaseApi.approveStaff(storeId, uid),
+        setStaffSignupEnabled: (storeId, enabled) => firebaseApi.setStaffSignupEnabled(storeId, enabled),
         transferStaff: (fromStoreId, toStoreId, uid) => firebaseApi.transferStaff(fromStoreId, toStoreId, uid),
         updateStoreBranding: (id, name, logoRef) => firebaseApi.updateStoreBranding(id, name, logoRef),
         syncPush: (changes) => {
@@ -238,7 +243,21 @@ export const useAccountStore = defineStore('account', () => {
 
   async function loadStaff(): Promise<void> {
     if (!currentStoreId.value || user.value?.account_role !== 'owner') { staffMembers.value = []; return }
-    try { staffMembers.value = (await api.staff(currentStoreId.value)).staff } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+    try {
+      const res = await api.staff(currentStoreId.value)
+      staffMembers.value = res.staff
+      staffSignupEnabled.value = res.staff_signup_enabled === true
+    } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+  }
+
+  async function approveStaff(uid: string): Promise<boolean> {
+    if (!currentStoreId.value || !api.approveStaff) return false
+    try { const next = await api.approveStaff(currentStoreId.value, uid); const i = staffMembers.value.findIndex((m) => m.uid === uid); if (i >= 0) staffMembers.value[i] = next; return true } catch (e) { error.value = e instanceof Error ? e.message : String(e); return false }
+  }
+
+  async function setStaffSignupEnabled(enabled: boolean): Promise<boolean> {
+    if (!currentStoreId.value || !api.setStaffSignupEnabled) return false
+    try { await api.setStaffSignupEnabled(currentStoreId.value, enabled); staffSignupEnabled.value = enabled; return true } catch (e) { error.value = e instanceof Error ? e.message : String(e); return false }
   }
 
   async function updateStaff(uid: string, patch: { role?: 'staff' | 'manager'; permissions?: StaffPermission[] }): Promise<boolean> {
@@ -479,6 +498,7 @@ export const useAccountStore = defineStore('account', () => {
     stores,
     availableStoreOptions,
     staffMembers,
+    staffSignupEnabled,
     currentStoreId,
     status,
     error,
@@ -495,6 +515,8 @@ export const useAccountStore = defineStore('account', () => {
     loadStaff,
     updateStaff,
     dismissStaff,
+    approveStaff,
+    setStaffSignupEnabled,
     transferStaff,
     updateStoreBranding,
     loginGoogle,

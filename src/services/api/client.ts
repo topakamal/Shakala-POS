@@ -27,7 +27,7 @@ export interface AccountStore {
   id: string | number
   name: string
   role: string
-  status?: 'active' | 'dismissed'
+  status?: 'active' | 'dismissed' | 'pending'
   logo_ref?: string | null
 }
 
@@ -40,7 +40,7 @@ export interface StaffMember {
   name: string
   email: string
   role: 'staff' | 'manager'
-  status: 'active' | 'dismissed'
+  status: 'active' | 'dismissed' | 'pending'
   permissions: StaffPermission[]
 }
 

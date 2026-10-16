@@ -6,38 +6,93 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function member(storeId) {
-      return signedIn() && exists(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid))
-        && (get(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid)).data.status == 'active'
-          || get(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid)).data.role == 'owner');
+    function storeDoc(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId));
     }
 
-    function owner(storeId) {
-      return signedIn() && get(/databases/$(database)/documents/stores/$(storeId)).data.owner_id == request.auth.uid;
+    function memberDoc(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid));
+    }
+
+    // Anggota AKTIF — status wajib 'active'. (Dulu: bug precedence operator
+    // meloloskan owner berstatus nonaktif.)
+    function isActiveMember(storeId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/stores/$(storeId)/members/$(request.auth.uid))
+        && memberDoc(storeId).data.status == 'active';
+    }
+
+    function isOwner(storeId) {
+      return isActiveMember(storeId) && memberDoc(storeId).data.role == 'owner';
+    }
+
+    function storeOwner(storeId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/stores/$(storeId))
+        && storeDoc(storeId).data.owner_id == request.auth.uid;
+    }
+
+    // Izin per entitas, ditegakkan di server (dulu: hanya dicek di aplikasi).
+    function hasPerm(storeId, perm) {
+      return isOwner(storeId)
+        || (isActiveMember(storeId)
+          && perm in memberDoc(storeId).data.get('permissions', []));
     }
 
     match /stores/{storeId} {
-      allow read: if member(storeId) || (signedIn() && resource.data.staff_signup_enabled == true);
-      allow create: if signedIn() && request.resource.data.owner_id == request.auth.uid;
-      allow update, delete: if owner(storeId);
+      // Discovery outlet terbuka tetap boleh dibaca untuk pendaftaran staf.
+      allow read: if isActiveMember(storeId)
+        || (signedIn() && resource.data.staff_signup_enabled == true);
+      allow create: if signedIn()
+        && request.resource.data.owner_id == request.auth.uid
+        && request.resource.data.staff_signup_enabled == false
+        && request.resource.data.keys().hasOnly(['name', 'owner_id', 'created_at', 'staff_signup_enabled', 'logo_ref']);
+      allow update, delete: if storeOwner(storeId);
 
       match /members/{userId} {
-        allow read: if member(storeId) || (signedIn() && userId == request.auth.uid);
-        allow create: if (owner(storeId) && (userId == request.auth.uid || request.resource.data.role in ['staff', 'manager']))
+        allow read: if isActiveMember(storeId) || (signedIn() && userId == request.auth.uid);
+        allow create: if (storeOwner(storeId)
+            && request.resource.data.uid == userId
+            && request.resource.data.keys().hasOnly(['uid', 'role', 'status', 'name', 'email', 'permissions'])
+            && request.resource.data.role in ['staff', 'manager']
+            && request.resource.data.status in ['active', 'dismissed', 'pending']
+            && request.resource.data.permissions is list)
+          // Pendaftaran mandiri: HANYA sebagai 'pending', tanpa permissions.
+          // Tanpa persetujuan owner, pendaftar tidak bisa baca/tulis apa pun.
           || (signedIn() && userId == request.auth.uid
-            && get(/databases/$(database)/documents/stores/$(storeId)).data.staff_signup_enabled == true
+            && storeDoc(storeId).data.staff_signup_enabled == true
+            && request.resource.data.keys().hasOnly(['uid', 'role', 'status', 'name', 'email', 'permissions'])
+            && request.resource.data.uid == request.auth.uid
             && request.resource.data.role == 'staff'
-            && request.resource.data.status == 'active');
-        allow update, delete: if owner(storeId);
+            && request.resource.data.status == 'pending'
+            && request.resource.data.permissions == []);
+        // Hanya owner yang boleh mengubah/menghapus; dokumen owner tak tersentuh.
+        allow update: if storeOwner(storeId)
+          && resource.data.role != 'owner'
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role in ['staff', 'manager']
+          && request.resource.data.status in ['active', 'dismissed', 'pending']
+          && request.resource.data.permissions is list
+          && request.resource.data.keys().hasOnly(['uid', 'role', 'status', 'name', 'email', 'permissions', 'dismissed_at', 'transferred_at']);
+        allow delete: if storeOwner(storeId) && resource.data.role != 'owner';
       }
 
-      match /{entity}/{entityId} {
-        allow read, write: if member(storeId);
-      }
+      // Hak akses per entitas (dulu: satu aturan 'member' untuk semua subkoleksi).
+      match /categories/{entityId}          { allow read, write: if hasPerm(storeId, 'products'); }
+      match /products/{entityId}            { allow read, write: if hasPerm(storeId, 'products'); }
+      match /media/{entityId}               { allow read, write: if hasPerm(storeId, 'products'); }
+      match /cashier_sessions/{entityId}    { allow read: if hasPerm(storeId, 'cashier') || hasPerm(storeId, 'reports'); allow write: if hasPerm(storeId, 'cashier'); }
+      match /sales/{entityId}               { allow read: if hasPerm(storeId, 'cashier') || hasPerm(storeId, 'reports'); allow write: if hasPerm(storeId, 'cashier'); }
+      match /sale_items/{entityId}          { allow read: if hasPerm(storeId, 'cashier') || hasPerm(storeId, 'reports'); allow write: if hasPerm(storeId, 'cashier'); }
+      match /cashflow_categories/{entityId} { allow read, write: if hasPerm(storeId, 'cashflow'); }
+      match /cashflow_entries/{entityId}    { allow read, write: if hasPerm(storeId, 'cashflow'); }
     }
 
     match /users/{userId} {
-      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if signedIn() && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['name', 'email', 'stores', 'current_store_id', 'account_role', 'account_deleted', 'deleted_at'])
+        && request.resource.data.account_role in ['owner', 'staff'];
     }
   }
 }
